@@ -9,6 +9,8 @@ export type RunError = {
   name: string;
   message: string;
   stack?: string;
+  /** 1-based line in the student's code where it was thrown, when the engine reports it. */
+  line?: number;
 };
 
 export type RunOptions = {

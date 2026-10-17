@@ -5,11 +5,15 @@ import type { LogLevel, RunResult } from "@/lib/editor/runner";
 export const TIMEOUT_MS = 5000;
 
 const levelStyles: Record<LogLevel, string> = {
-  log: "",
-  info: "text-blue-600 dark:text-blue-400",
-  warn: "text-amber-600 dark:text-amber-400",
-  error: "text-red-600 dark:text-red-400",
+  log: "text-fg",
+  info: "text-fg",
+  warn: "text-amber-600",
+  error: "text-red-700",
 };
+
+// Small header buttons, matching the Figma Output Pane "Stop button".
+const headerButton =
+  "rounded px-2 py-0.5 text-xs font-semibold normal-case tracking-normal text-on-accent transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
 
 type OutputPanelProps = {
   running: boolean;
@@ -29,43 +33,54 @@ export function OutputPanel({
   onStop,
   emptyText = "Press Run to see output here.",
 }: OutputPanelProps) {
+  const status = statusText(running, result);
+
   return (
-    <section className="flex min-h-0 flex-15 flex-col border-t border-zinc-200 dark:border-zinc-800">
-      <div className="flex items-center gap-3 border-b border-zinc-200 p-2 dark:border-zinc-800">
-        {running && onStop && (
-          <button onClick={onStop} className="rounded bg-red-600 px-3 py-1 text-sm font-medium text-white">
-            Stop
-          </button>
-        )}
-        {!running && onRun && (
-          <button onClick={onRun} className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white">
-            Run
-          </button>
-        )}
-        <span className="text-sm text-zinc-500">{statusText(running, result)}</span>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto p-3 font-mono text-sm">
-        {result?.logs.map((line, i) => (
-          <pre key={i} className={`whitespace-pre-wrap ${levelStyles[line.level]}`}>
-            {line.text}
-          </pre>
-        ))}
-        {result?.error && (
-          <pre className="whitespace-pre-wrap text-red-600 dark:text-red-400">
-            {result.error.stack ?? `${result.error.name}: ${result.error.message}`}
-          </pre>
-        )}
-        {!running && !result && <p className="text-zinc-500">{emptyText}</p>}
+    <section className="h-40 shrink-0 border-t border-border p-2">
+      <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface-sunken">
+        <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-xs leading-4 font-semibold tracking-[0.3px] text-muted uppercase">
+          <span>
+            Output{status && <span className="normal-case"> · {status}</span>}
+          </span>
+          {running && onStop && (
+            <button type="button" onClick={onStop} className={`${headerButton} bg-red-600`}>
+              ■ Stop
+            </button>
+          )}
+          {!running && onRun && (
+            <button type="button" onClick={onRun} className={`${headerButton} bg-accent`}>
+              ▶ Run
+            </button>
+          )}
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-3 py-2 font-mono text-sm leading-6">
+          {result?.logs.map((line, i) => (
+            <pre key={i} className={`font-mono whitespace-pre-wrap ${levelStyles[line.level]}`}>
+              {line.text}
+            </pre>
+          ))}
+          {result?.error && (
+            <pre className="rounded bg-red-50 px-2 py-1 font-mono whitespace-pre-wrap text-red-700">
+              {`${result.error.name}: ${result.error.message}`}
+              {result.error.line !== undefined && (
+                <span className="font-sans font-semibold"> (line {result.error.line})</span>
+              )}
+            </pre>
+          )}
+          {!running && !result && (
+            <p className="font-sans leading-5 text-muted">{emptyText}</p>
+          )}
+        </div>
       </div>
     </section>
   );
 }
 
 function statusText(running: boolean, result: RunResult | undefined) {
-  if (running) return "Running…";
+  if (running) return "running…";
   if (!result) return "";
-  if (result.timedOut) return `Stopped: took longer than ${TIMEOUT_MS / 1000} seconds`;
-  if (result.stopped) return "Stopped";
-  if (result.error) return "Finished with an error";
-  return "Finished";
+  if (result.timedOut) return `stopped after ${TIMEOUT_MS / 1000} seconds`;
+  if (result.stopped) return "stopped";
+  if (result.error) return "finished with an error";
+  return "";
 }

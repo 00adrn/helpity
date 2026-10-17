@@ -40,9 +40,41 @@ function format(value: unknown): string {
   }
 }
 
+// Student code is tagged with a sourceURL so its stack frames read `student-code.js:LINE:COL`
+// in Chrome, Firefox and Safari alike, and can't be confused with this worker's own frames.
+const SOURCE_URL = "student-code.js";
+const STUDENT_FRAME = /student-code\.js:(\d+)/;
+
+/**
+ * How many lines the engine puts in front of a `new Function` body (V8 adds a two-line header).
+ * Measured once with a probe that throws on its first line, so no engine's offset is hard-coded.
+ */
+const LINE_OFFSET = (() => {
+  try {
+    new Function(`throw new Error();\n//# sourceURL=${SOURCE_URL}`)();
+  } catch (probe) {
+    const match = probe instanceof Error ? probe.stack?.match(STUDENT_FRAME) : null;
+    if (match) return Number(match[1]) - 1;
+  }
+  return 0;
+})();
+
+let studentLineCount = 0;
+
+/**
+ * The line in the student's code an error came from: the innermost stack frame in their code.
+ * Undefined when the engine gives no such frame, e.g. V8 syntax errors from `new Function`.
+ */
+function studentLine(error: Error): number | undefined {
+  const match = error.stack?.match(STUDENT_FRAME);
+  if (!match) return undefined;
+  const line = Number(match[1]) - LINE_OFFSET;
+  return line >= 1 && line <= studentLineCount ? line : undefined;
+}
+
 function toRunError(reason: unknown): RunError {
   if (reason instanceof Error) {
-    return { name: reason.name, message: reason.message, stack: reason.stack };
+    return { name: reason.name, message: reason.message, stack: reason.stack, line: studentLine(reason) };
   }
   return { name: "Error", message: format(reason) };
 }
@@ -88,8 +120,10 @@ scope.addEventListener("unhandledrejection", (event) => {
 scope.addEventListener("message", (event) => {
   if (event.data.type !== "run") return;
   patchConsole();
+  studentLineCount = event.data.code.split("\n").length;
   try {
-    new Function(event.data.code)();
+    // The newline keeps the sourceURL comment out of a trailing `//` comment in the student's code.
+    new Function(`${event.data.code}\n//# sourceURL=${SOURCE_URL}`)();
     post({ type: "done" });
   } catch (err) {
     post({ type: "error", error: toRunError(err) });
