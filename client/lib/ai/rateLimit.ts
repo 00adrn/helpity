@@ -16,8 +16,8 @@ export type RateLimitConfig = {
 
 export type RateLimitResult = { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
-const DEFAULT_MAX = 10;
-const DEFAULT_WINDOW_SECONDS = 60;
+const DEFAULT_MAX = 0;
+const DEFAULT_WINDOW_SECONDS = 5;
 /** Sweep idle keys once the table grows past this many. */
 const SWEEP_AT = 1_000;
 

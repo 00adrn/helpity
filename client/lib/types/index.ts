@@ -22,6 +22,8 @@ export type AssistantRequest = {
   cursor?: { line: number; column: number };
   /** The text the user has highlighted, if any. */
   selection?: string;
+  /** Helpity has been asked about Verity and answers in a temper for the rest of the session. */
+  angry?: boolean;
 };
 
 export type AssistantResponse = {

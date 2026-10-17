@@ -4,7 +4,13 @@ import type { editor as MonacoNs } from "monaco-editor";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { askAssistant, RateLimitError } from "@/lib/ai";
-import { EMOTION_SPRITE, spriteUrl, useAssistantMood, type Sprite } from "@/lib/ai/emotion";
+import {
+  EMOTION_SPRITE,
+  isVerityQuestion,
+  spriteUrl,
+  useAssistantMood,
+  type Sprite,
+} from "@/lib/ai/emotion";
 import { useCursorFollower } from "@/lib/ai/useCursorFollower";
 
 const SIZE = 56;
@@ -33,8 +39,7 @@ const FIDGETS = [
 const FIDGET_MIN_MS = 2500;
 const FIDGET_MAX_MS = 6000;
 
-const ALL_SPRITES: Sprite[] = ["flat", "happy", "think", "open"];
-
+const ALL_SPRITES: Sprite[] = ["flat", "happy", "think", "open", "angry"];
 type MonacoEditor = MonacoNs.IStandaloneCodeEditor;
 
 /** What the assistant needs to know about the editor at the moment of asking. */
@@ -57,7 +62,7 @@ function readEditorContext(editor: MonacoEditor) {
 /** The floating assistant: trails the text cursor, answers questions, and shows its mood. */
 export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { emotion, set, flash } = useAssistantMood();
+  const { emotion, angry, enrage, calm, set, flash } = useAssistantMood();
   const [flap, setFlap] = useState(false);
   const [fidget, setFidget] = useState<(typeof FIDGETS)[number]["name"]>();
   const [open, setOpen] = useState(false);
@@ -101,7 +106,7 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
 
   // While idle, Helpity occasionally does a little trick.
   useEffect(() => {
-    if (emotion !== "idle") return;
+    if (angry || emotion !== "idle") return;
     let timer: ReturnType<typeof setTimeout>;
 
     const schedule = () => {
@@ -120,7 +125,7 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
       clearTimeout(timer);
       setFidget(undefined);
     };
-  }, [emotion]);
+  }, [emotion, angry]);
 
   // Mouth flap while talking.
   useEffect(() => {
@@ -132,7 +137,7 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
   if (!editor) return null;
 
   const busy = emotion === "thinking" || emotion === "talking";
-  const sprite = emotion === "talking" && flap ? "flat" : EMOTION_SPRITE[emotion];
+  const sprite = angry ? "angry" : emotion === "talking" && flap ? "flat" : EMOTION_SPRITE[emotion];
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -156,6 +161,13 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
 
     request.current?.abort();
     clearTimeout(talkTimer.current);
+
+    // The face stays angry until the next question. Only the Verity question itself gets an
+    // angry answer, so Gemini never hears about it afterwards.
+    const isAngry = isVerityQuestion(text);
+    if (isAngry) enrage();
+    else calm();
+
     const controller = new AbortController();
     request.current = controller;
 
@@ -163,7 +175,12 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
     set("thinking");
 
     try {
-      const result = await askAssistant({ question: text, ...readEditorContext(editor) }, controller.signal);
+      const result = await askAssistant({
+          question: text,
+          ...readEditorContext(editor),
+          // No code goes along with a Verity question, so there is nothing to give feedback on.
+          ...(isAngry && { angry: true, code: "", selection: undefined }),
+        }, controller.signal);
       setQuestion("");
       setAnswer(result.answer);
       set("talking");
@@ -195,11 +212,11 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
         aria-label="Helpity assistant"
         aria-expanded={open}
         onClick={handleClick}
-        className={`helpity helpity-${emotion} pointer-events-auto block h-full w-full cursor-pointer`}
+        className={`helpity helpity-${angry ? "angry" : emotion} pointer-events-auto block h-full w-full cursor-pointer`}
       >
         <span className="helpity-body">
           <span
-            className={`helpity-fidget ${emotion === "idle" && fidget ? `helpity-fidget-${fidget}` : ""}`}
+            className={`helpity-fidget ${!angry && emotion === "idle" && fidget ? `helpity-fidget-${fidget}` : ""}`}
           >
             {/* Every sprite stays mounted so swapping faces never flashes while loading. */}
             {ALL_SPRITES.map((name) => (

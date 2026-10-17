@@ -4,7 +4,7 @@ import type { Emotion } from "../types";
 
 export type { Emotion };
 
-export type Sprite = "flat" | "happy" | "think" | "open";
+export type Sprite = "flat" | "happy" | "think" | "open" | "angry";
 
 /**
  * Which image each emotion shows. Happy is the default; `flat` and `open` only appear while
@@ -18,6 +18,17 @@ export const EMOTION_SPRITE: Record<Emotion, Sprite> = {
   error: "think",
 };
 
+/**
+ * Asking Helpity whether it is "Verity" makes it angry. This is not an `Emotion` the model can
+ * pick: only the user's question triggers it, and it lasts until they ask something else.
+ */
+export function isVerityQuestion(text: string): boolean {
+  return /\bverit(y|ie|ee)\b/i.test(text);
+}
+
+/** Survives Helpity remounting (e.g. switching files) but not a page reload. */
+let enraged = false;
+
 export function spriteUrl(sprite: Sprite): string {
   return `/helpity/helpity_${sprite}_rendered.png`;
 }
@@ -28,6 +39,7 @@ export function spriteUrl(sprite: Sprite): string {
  */
 export function useAssistantMood() {
   const [emotion, setEmotion] = useState<Emotion>("idle");
+  const [angry, setAngry] = useState(enraged);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const clear = () => clearTimeout(timer.current);
@@ -44,5 +56,16 @@ export function useAssistantMood() {
     timer.current = setTimeout(() => setEmotion("idle"), ms);
   }, []);
 
-  return { emotion, set, flash };
+  /** Angry face overrides every other until `calm`. */
+  const enrage = useCallback(() => {
+    enraged = true;
+    setAngry(true);
+  }, []);
+
+  const calm = useCallback(() => {
+    enraged = false;
+    setAngry(false);
+  }, []);
+
+  return { emotion, angry, enrage, calm, set, flash };
 }
