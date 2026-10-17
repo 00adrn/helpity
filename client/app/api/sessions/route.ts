@@ -1,7 +1,25 @@
+import { isPresetId } from "@/lib/problems/presets";
 import { createSession } from "@/lib/sessions/data_store";
 
-/** Start a new session and return its join code. */
-export async function POST() {
-  const session = createSession();
-  return Response.json({ code: session.code });
+/** Validate the selected question, start a session, and return its join code. */
+export async function POST(request: Request) {
+  let input: unknown;
+
+  try {
+    input = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const presetId =
+    typeof input === "object" && input !== null && "presetId" in input
+      ? input.presetId
+      : undefined;
+
+  if (!isPresetId(presetId)) {
+    return Response.json({ error: "Choose a valid question" }, { status: 400 });
+  }
+
+  const session = createSession(presetId);
+  return Response.json({ code: session.code, presetId: session.presetId });
 }
