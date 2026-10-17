@@ -16,7 +16,7 @@ export function SessionView({ code }: { code: string }) {
   if (!participant) {
     return (
       <p className="p-6">
-        You haven't joined this session in this tab.{" "}
+        You haven&apos;t joined this session in this tab.{" "}
         <Link href="/" className="underline">
           Go back and join with the code.
         </Link>

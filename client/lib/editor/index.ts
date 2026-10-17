@@ -14,5 +14,5 @@ export const baseEditorOptions: EditorProps["options"] = {
   tabCompletion: "off",
   snippetSuggestions: "none",
   inlineSuggest: { enabled: false },
-  hover: { enabled: "off" },
+  hover: { enabled: false },
 };
