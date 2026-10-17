@@ -108,7 +108,12 @@ export function ProblemPicker({
                   {problem.title}
                 </span>
                 <span className="text-base leading-6 font-medium text-balance text-muted">
-                  {problem.detail}
+                  {problem.detail.split("→").map((part, i) => (
+                    <span key={i}>
+                      {i > 0 && <span className="font-glyph">→</span>}
+                      {part}
+                    </span>
+                  ))}
                 </span>
               </button>
             );

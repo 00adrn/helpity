@@ -17,10 +17,19 @@ const sessions = (globalThis.__sessions ??= new Map());
 const app = next({ dev, hostname: "localhost", port });
 const handleRequest = app.getRequestHandler();
 
+/**
+ * Rooms are `session:CODE` (the shared class room) or `session:CODE:student:ID` (one student's
+ * private code window, which the teacher can also open to watch). Codes never contain ":".
+ */
+function parseDocumentName(documentName) {
+  const [prefix, code, kind, studentId] = documentName.split(":");
+  if (prefix !== "session" || !code) return {};
+  return { session: sessions.get(code), studentId: kind === "student" ? studentId : undefined };
+}
+
 /** Find the in-memory session that owns a Hocuspocus document. */
 function getDocumentSession(documentName) {
-  if (!documentName.startsWith("session:")) return undefined;
-  return sessions.get(documentName.slice("session:".length));
+  return parseDocumentName(documentName).session;
 }
 
 const hocuspocus = new Hocuspocus({
@@ -37,6 +46,12 @@ const hocuspocus = new Hocuspocus({
     if (!session) throw new Error("No live session has that code");
 
     const document = new Y.Doc();
+    const { studentId } = parseDocumentName(documentName);
+    if (studentId) {
+      const state = session.studentStates?.get(studentId);
+      if (state) Y.applyUpdate(document, state);
+      return document;
+    }
     if (session.documentState) {
       Y.applyUpdate(document, session.documentState);
     } else {
@@ -49,7 +64,12 @@ const hocuspocus = new Hocuspocus({
   async onStoreDocument({ documentName, document }) {
     const session = getDocumentSession(documentName);
     if (!session) throw new Error("No live session has that code");
-    session.documentState = Y.encodeStateAsUpdate(document);
+    const { studentId } = parseDocumentName(documentName);
+    if (studentId) {
+      (session.studentStates ??= new Map()).set(studentId, Y.encodeStateAsUpdate(document));
+    } else {
+      session.documentState = Y.encodeStateAsUpdate(document);
+    }
   },
 });
 

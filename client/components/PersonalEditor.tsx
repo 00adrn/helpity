@@ -16,6 +16,8 @@ import {
 } from "@/lib/editor/runner";
 import { presets, type PresetId } from "@/lib/problems/presets";
 import type { MonacoEditor } from "@/components/SharedEditor";
+import { connectToStudentCode } from "@/lib/sockets/personal";
+import type { SessionParticipant } from "@/lib/sockets/sock";
 
 // Stable reference so the Editor doesn't re-apply options on every render.
 const options = { ...baseEditorOptions };
@@ -28,29 +30,46 @@ export function PersonalEditor({
   onEditor,
   presetId,
   onExplain,
+  onSubmit,
+  code: sessionCode,
+  participant,
 }: {
   onEditor?: (editor: MonacoEditor) => void;
   presetId?: PresetId;
   /** A run ended in an error; Helpity should explain the output. */
   onExplain?: (output: string) => void;
+  /** The student ran the tests; this is their submission. */
+  onSubmit?: (submission: { passed: number; total: number; code: string }) => void;
+  /** The session this editor belongs to, and who is typing; the code is synced live for the teacher. */
+  code: string;
+  participant: SessionParticipant;
 }) {
   const [editor, setEditor] = useState<MonacoEditor>();
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult>();
   const [testResult, setTestResult] = useState<TestRunResult>();
   const handle = useRef<RunHandle | TestRunHandle>(undefined);
-  const loadedPreset = useRef<PresetId | undefined>(undefined);
   const tests = presetId ? presets[presetId].tests : [];
 
   // Don't leave a worker running if the student leaves mid-run.
   useEffect(() => () => handle.current?.stop(), []);
 
-  // Load the student's practice starter once the selected problem arrives from the shared room.
+  // Sync this editor through the student's own Yjs room so the teacher can watch and see the cursor.
+  const { id, name, color, role, avatar } = participant;
   useEffect(() => {
-    if (!editor || !presetId || loadedPreset.current === presetId) return;
-    loadedPreset.current = presetId;
-    if (!editor.getValue()) editor.setValue(presets[presetId].studentCode);
-  }, [editor, presetId]);
+    if (!editor || !presetId) return;
+    const connection = connectToStudentCode(sessionCode, id, { id, name, color, role, avatar }, "dev-token");
+    connection.synced.then(() => {
+      // First visit: seed the room with the starter. On a reload the saved code is loaded instead.
+      if (connection.text.length === 0 && presets[presetId].studentCode) {
+        connection.text.insert(0, presets[presetId].studentCode);
+      }
+      return connection.bindEditor(editor);
+    });
+    return () => {
+      connection.close();
+    };
+  }, [editor, presetId, sessionCode, id, name, color, role, avatar]);
 
   useEffect(() => {
     if (!editor) return;
@@ -91,6 +110,7 @@ export function PersonalEditor({
     if (handle.current !== current) return;
     handle.current = undefined;
     if (editor?.getModel()?.getVersionId() === version) setTestResult(outcome);
+    onSubmit?.({ passed: outcome.cases.filter((c) => c.passed).length, total: tests.length, code });
     setRunning(false);
   }
 

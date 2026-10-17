@@ -1,3 +1,4 @@
+import type { StudentProgress } from "@/lib/sockets/progress";
 import type { OnMount } from "@monaco-editor/react";
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import type { MonacoBinding } from "y-monaco";
@@ -53,6 +54,8 @@ export function connectToSession(
   const meta = doc.getMap<unknown>("meta");
   /** Holds the latest code run under key "state"; only the teacher writes it (see components/SessionOutput.tsx). */
   const run = doc.getMap<unknown>("run");
+  /** Each student's last test submission, keyed by participant id (see lib/sockets/progress.ts). */
+  const progress = doc.getMap<StudentProgress>("progress");
   const bindings = new Set<() => void>();
   let raisedHand = false;
   let closed = false;
@@ -115,6 +118,7 @@ export function connectToSession(
     text,
     meta,
     run,
+    progress,
     awareness,
     provider,
     bindSharedEditor,
@@ -123,6 +127,12 @@ export function connectToSession(
       if (closed) throw new Error("The session connection is closed");
       raisedHand = value;
       publishPresence();
+    },
+    /** Record a test submission for this student: the score, the code, and one more attempt. */
+    submitProgress(result: { passed: number; total: number; code: string }) {
+      if (closed) throw new Error("The session connection is closed");
+      const attempts = (progress.get(participant.id)?.attempts ?? 0) + 1;
+      progress.set(participant.id, { name: participant.name, ...result, attempts });
     },
     /**
      * Store the one student allowed to edit, or null to revoke access.

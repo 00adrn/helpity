@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Quicksand } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
+
+// Full Inter (not the Google subset) because the arrows, check marks and shapes we use are outside "latin".
+const inter = localFont({
+  src: "./fonts/InterVariable.woff2",
+  variable: "--font-inter",
+});
 
 const quicksand = Quicksand({
   variable: "--font-quicksand",
@@ -21,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${quicksand.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${quicksand.variable} ${geistMono.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
