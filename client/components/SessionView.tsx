@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import type { editor as MonacoNs } from "monaco-editor";
 import { useState } from "react";
 
+import { Helpity } from "@/components/Helpity";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { SharedEditor } from "@/components/SharedEditor";
 import { useStoredParticipant } from "@/lib/sockets/participant_storage";
@@ -12,6 +14,7 @@ import type { SessionConnection } from "@/lib/sockets/sock";
 export function SessionView({ code }: { code: string }) {
   const participant = useStoredParticipant(code);
   const [session, setSession] = useState<SessionConnection>();
+  const [editor, setEditor] = useState<MonacoNs.IStandaloneCodeEditor>();
 
   if (!participant) {
     return (
@@ -37,10 +40,12 @@ export function SessionView({ code }: { code: string }) {
             participant={participant}
             token="dev-token"
             onSession={setSession}
+            onEditor={setEditor}
           />
         </div>
         <ParticipantsPanel awareness={session?.awareness} selfId={participant.id} />
       </div>
+      <Helpity editor={editor} />
     </div>
   );
 }
