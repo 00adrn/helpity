@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useCallback, useState, useSyncExternalStore } from "react";
 
+import { Helpity } from "@/components/Helpity";
 import { ParticipantsPanel, useParticipants } from "@/components/ParticipantsPanel";
-import { SharedEditor } from "@/components/SharedEditor";
+import { RemoteCursors } from "@/components/RemoteCursors";
+import { SessionOutput } from "@/components/SessionOutput";
+import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { TopBar } from "@/components/TopBar";
 import { useStoredParticipant } from "@/lib/sockets/participant_storage";
 import type { SessionConnection } from "@/lib/sockets/sock";
@@ -31,6 +34,7 @@ function useWriterId(meta: SessionConnection["meta"] | undefined): string | null
 export function SessionView({ code }: { code: string }) {
   const participant = useStoredParticipant(code);
   const [session, setSession] = useState<SessionConnection>();
+  const [editor, setEditor] = useState<MonacoEditor>();
   const participants = useParticipants(session?.awareness);
   const writerId = useWriterId(session?.meta);
 
@@ -84,11 +88,19 @@ export function SessionView({ code }: { code: string }) {
                 participant={participant}
                 token="dev-token"
                 onSession={setSession}
+                onEditor={setEditor}
               />
             </div>
+            <SessionOutput
+              session={session}
+              isTeacher={isTeacher}
+              getCode={() => editor?.getValue()}
+            />
           </section>
         </main>
+        <RemoteCursors session={session} />
       </div>
+      <Helpity editor={editor} />
     </div>
   );
 }

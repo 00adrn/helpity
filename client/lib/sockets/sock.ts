@@ -51,6 +51,8 @@ export function connectToSession(
   const awareness: NonNullable<typeof providerAwareness> = providerAwareness;
   const text = doc.getText("content");
   const meta = doc.getMap<unknown>("meta");
+  /** Holds the latest code run under key "state"; only the teacher writes it (see components/SessionOutput.tsx). */
+  const run = doc.getMap<unknown>("run");
   const bindings = new Set<() => void>();
   let raisedHand = false;
   let closed = false;
@@ -112,6 +114,7 @@ export function connectToSession(
   return {
     text,
     meta,
+    run,
     awareness,
     provider,
     bindSharedEditor,
