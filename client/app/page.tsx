@@ -8,6 +8,7 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { button } from "@/components/button";
 import { HelpityLogo } from "@/components/HelpityLogo";
 import {
+  concepts,
   isPresetId,
   presets,
   type PresetId,
@@ -20,11 +21,12 @@ type Joined = { code: string; participant: SessionParticipant };
 
 type Step = { name: "choose" } | { name: "join" } | { name: "avatar"; joined: Joined };
 
-const levels: { value: PresetLevel; label: string }[] = [
-  { value: "elementary", label: "Elementary" },
-  { value: "middle", label: "Middle school" },
-  { value: "high", label: "High school" },
-];
+const levelLabels: Record<PresetLevel, string> = {
+  blank: "Blank",
+  elementary: "Elementary",
+  middle: "Middle school",
+  high: "High school",
+};
 
 /** Show the landing page, question picker, student join form, or avatar picker. */
 export default function Home() {
@@ -38,7 +40,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
-  /** Open the teacher's question picker before creating a session. */
+  /** Open the teacher's problem picker before creating a session. */
   function openQuestionPicker() {
     setTeacherError(undefined);
     questionDialog.current?.showModal();
@@ -49,12 +51,12 @@ export default function Home() {
     questionDialog.current?.close();
   }
 
-  /** Create a session with the selected starter and save the teacher's identity. */
+  /** Create a session with the selected teacher example and student exercise. */
   async function startSession(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     if (!isPresetId(presetId)) {
-      setTeacherError("Choose a question first");
+      setTeacherError("Choose a problem first");
       return;
     }
 
@@ -223,10 +225,10 @@ export default function Home() {
       >
         <form onSubmit={startSession} className="flex flex-col gap-4">
           <h2 id="question-dialog-title" className="text-xl font-bold">
-            Choose a question
+            Choose a problem
           </h2>
           <label htmlFor="preset" className="text-sm font-semibold text-muted">
-            Question
+            Problem
           </label>
           <select
             id="preset"
@@ -236,20 +238,33 @@ export default function Home() {
             className="rounded-lg border border-border bg-surface px-3 py-2 text-fg"
           >
             <option value="" disabled>
-              Select a question
+              Select a problem
             </option>
-            {levels.map((level) => (
-              <optgroup key={level.value} label={level.label}>
+            <option value="blank">Blank file · no tests</option>
+            {concepts.map((concept) => (
+              <optgroup key={concept} label={concept}>
                 {Object.entries(presets)
-                  .filter(([, preset]) => preset.level === level.value)
+                  .filter(([, preset]) => preset.concept === concept)
                   .map(([id, preset]) => (
                     <option key={id} value={id}>
-                      {preset.title}
+                      {preset.teacherTitle} → {preset.title} · {levelLabels[preset.level]}
                     </option>
                   ))}
               </optgroup>
             ))}
           </select>
+          {isPresetId(presetId) && (
+            <div className="rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+              {presetId === "blank" ? (
+                <p>Both code windows start empty. There are no tests.</p>
+              ) : (
+                <>
+                  <p>Class example: {presets[presetId].teacherTitle}</p>
+                  <p>Student practice: {presets[presetId].title} · {presets[presetId].tests.length} tests</p>
+                </>
+              )}
+            </div>
+          )}
           {teacherError && <p role="alert" className="text-sm text-red-600">{teacherError}</p>}
           <div className="flex justify-end gap-3">
             <button type="button" onClick={closeQuestionPicker} disabled={busy} className={button.secondary}>

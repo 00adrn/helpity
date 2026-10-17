@@ -1,6 +1,6 @@
 "use client";
 
-import type { LogLevel, RunResult } from "@/lib/editor/runner";
+import type { LogLevel, RunResult, TestRunResult } from "@/lib/editor/runner";
 
 export const TIMEOUT_MS = 5000;
 
@@ -18,22 +18,26 @@ const headerButton =
 type OutputPanelProps = {
   running: boolean;
   result?: RunResult;
+  testResult?: TestRunResult;
   /** Run/Stop controls only show when these are given, so a read-only viewer passes neither. */
   onRun?: () => void;
+  onRunTests?: () => void;
   onStop?: () => void;
   /** Shown when there is nothing to display yet. */
   emptyText?: string;
 };
 
-/** Console output of a run, with optional Run/Stop controls. It only displays; it never runs code itself. */
+/** Console output or preset test results, with controls supplied by the owning editor. */
 export function OutputPanel({
   running,
   result,
+  testResult,
   onRun,
+  onRunTests,
   onStop,
   emptyText = "Press Run to see output here.",
 }: OutputPanelProps) {
-  const status = statusText(running, result);
+  const status = testResult ? testStatusText(testResult) : statusText(running, result);
 
   return (
     <section className="h-full min-h-0 border-t border-border p-2">
@@ -53,6 +57,11 @@ export function OutputPanel({
                 ▶ Run
               </button>
             )}
+            {!running && onRunTests && (
+              <button type="button" onClick={onRunTests} className={`${headerButton} bg-accent`}>
+                ✓ Run tests
+              </button>
+            )}
           </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-3 py-2 font-mono text-sm leading-6">
@@ -69,13 +78,35 @@ export function OutputPanel({
               )}
             </pre>
           )}
-          {!running && !result && (
+          {testResult?.cases.map((test, i) => (
+            <div key={i} className={test.passed ? "text-green-700" : "text-red-700"}>
+              <span className="font-sans font-semibold">{test.passed ? "✓" : "✗"} {test.name}</span>
+              {!test.passed && (
+                <pre className="font-mono whitespace-pre-wrap text-xs text-muted">
+                  {`Expected: ${test.expected}\nGot: ${test.actual}`}
+                </pre>
+              )}
+            </div>
+          ))}
+          {testResult?.error && (
+            <pre className="font-mono whitespace-pre-wrap text-red-700">
+              {`${testResult.error.name}: ${testResult.error.message}`}
+            </pre>
+          )}
+          {!running && !result && !testResult && (
             <p className="font-sans leading-5 text-muted">{emptyText}</p>
           )}
         </div>
       </div>
     </section>
   );
+}
+
+function testStatusText(result: TestRunResult) {
+  if (result.timedOut) return `tests stopped after ${TIMEOUT_MS / 1000} seconds`;
+  if (result.stopped) return "tests stopped";
+  if (result.error) return "tests finished with an error";
+  return `${result.cases.filter((test) => test.passed).length}/${result.cases.length} tests passed`;
 }
 
 /** The output as plain text, for sending to Helpity. */

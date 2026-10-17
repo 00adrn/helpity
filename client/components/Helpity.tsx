@@ -168,38 +168,6 @@ export function Helpity({
     return () => clearInterval(id);
   }, [emotion]);
 
-  // Explain the output when the student asks from the output panel.
-  const lastExplainId = useRef(explain?.id);
-  useEffect(() => {
-    if (!explain || explain.id === lastExplainId.current || !editor) return;
-    lastExplainId.current = explain.id;
-    setOpen(true);
-    void ask(EXPLAIN_OUTPUT, explain.output.slice(0, MAX_OUTPUT));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [explain, editor]);
-
-  if (!editor) return null;
-
-  const busy = emotion === "thinking" || emotion === "talking";
-  const sprite = angry ? "angry" : emotion === "talking" && flap ? "flat" : EMOTION_SPRITE[emotion];
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    void ask(question.trim());
-  }
-
-  // Clicking while code is highlighted explains it right away; otherwise toggle the panel.
-  // Monaco keeps its selection while focus is elsewhere, so the highlight is still there.
-  function handleClick() {
-    const hasSelection = !!editor && !!readEditorContext(editor).selection;
-    if (hasSelection && !busy) {
-      setOpen(true);
-      void ask(EXPLAIN_SELECTION);
-    } else {
-      setOpen((o) => !o);
-    }
-  }
-
   async function ask(text: string, output?: string) {
     if (!text || !editor) return;
 
@@ -243,6 +211,38 @@ export function Helpity({
           : "Oops, I couldn't answer that. Try again in a moment.",
       );
       flash("error", AFTERGLOW_MS);
+    }
+  }
+
+  // Explain the output when the student asks from the output panel.
+  const lastExplainId = useRef(explain?.id);
+  useEffect(() => {
+    if (!explain || explain.id === lastExplainId.current || !editor) return;
+    lastExplainId.current = explain.id;
+    setOpen(true);
+    void ask(EXPLAIN_OUTPUT, explain.output.slice(0, MAX_OUTPUT));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [explain, editor]);
+
+  if (!editor) return null;
+
+  const busy = emotion === "thinking" || emotion === "talking";
+  const sprite = angry ? "angry" : emotion === "talking" && flap ? "flat" : EMOTION_SPRITE[emotion];
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    void ask(question.trim());
+  }
+
+  // Clicking while code is highlighted explains it right away; otherwise toggle the panel.
+  // Monaco keeps its selection while focus is elsewhere, so the highlight is still there.
+  function handleClick() {
+    const hasSelection = !!editor && !!readEditorContext(editor).selection;
+    if (hasSelection && !busy) {
+      setOpen(true);
+      void ask(EXPLAIN_SELECTION);
+    } else {
+      setOpen((o) => !o);
     }
   }
 

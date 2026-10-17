@@ -11,6 +11,7 @@ import { SplitPane, useMinWidth } from "@/components/SplitPane";
 import { SessionOutput } from "@/components/SessionOutput";
 import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { TopBar } from "@/components/TopBar";
+import { isPresetId, presets, type PresetId } from "@/lib/problems/presets";
 import { useStoredParticipant } from "@/lib/sockets/participant_storage";
 import type { SessionConnection } from "@/lib/sockets/sock";
 
@@ -32,6 +33,24 @@ function useWriterId(meta: SessionConnection["meta"] | undefined): string | null
   return useSyncExternalStore(subscribe, read, () => null);
 }
 
+/** The selected starter is stored in the same shared metadata as the writer. */
+function usePresetId(meta: SessionConnection["meta"] | undefined): PresetId | undefined {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!meta) return () => {};
+      meta.observe(onChange);
+      return () => meta.unobserve(onChange);
+    },
+    [meta],
+  );
+  const read = () => {
+    const value = meta?.get("presetId");
+    return isPresetId(value) ? value : undefined;
+  };
+
+  return useSyncExternalStore(subscribe, read, () => undefined);
+}
+
 /** The live session screen: navbar, participants sidebar, and the class code window. */
 export function SessionView({ code }: { code: string }) {
   const participant = useStoredParticipant(code);
@@ -44,6 +63,7 @@ export function SessionView({ code }: { code: string }) {
   const [explain, setExplain] = useState<{ output: string; id: number }>();
   const participants = useParticipants(session?.awareness);
   const writerId = useWriterId(session?.meta);
+  const presetId = usePresetId(session?.meta);
   const wide = useMinWidth(768);
   const [sidebarWidth, setSidebarWidth] = useState(240);
 
@@ -79,7 +99,9 @@ export function SessionView({ code }: { code: string }) {
   const classCode = (
     <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
-        <h2 className="font-bold text-fg">Class code</h2>
+        <h2 className="min-w-0 truncate font-bold text-fg">
+          Class code{presetId && <span className="ml-2 text-sm font-normal text-muted">· {presets[presetId].teacherTitle}</span>}
+        </h2>
         <span className="truncate text-xs text-muted">{status}</span>
       </div>
       <SplitPane
@@ -138,6 +160,7 @@ export function SessionView({ code }: { code: string }) {
               b={
                 <PersonalEditor
                   onEditor={setPersonalEditor}
+                  presetId={presetId}
                   onExplain={(output) => {
                     setLastFocused(personalEditor);
                     setExplain((prev) => ({ output, id: (prev?.id ?? 0) + 1 }));

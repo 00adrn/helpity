@@ -1,7 +1,7 @@
 import { isPresetId } from "@/lib/problems/presets";
 import { createSession } from "@/lib/sessions/data_store";
 
-/** Validate the selected question, start a session, and return its join code. */
+/** Validate the selected problem pair, start a session, and return its join code. */
 export async function POST(request: Request) {
   let input: unknown;
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       : undefined;
 
   if (!isPresetId(presetId)) {
-    return Response.json({ error: "Choose a valid question" }, { status: 400 });
+    return Response.json({ error: "Choose a valid problem" }, { status: 400 });
   }
 
   const session = createSession(presetId);
