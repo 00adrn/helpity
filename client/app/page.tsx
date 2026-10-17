@@ -21,6 +21,7 @@ type Joined = { code: string; participant: SessionParticipant };
 type Step = { name: "choose" } | { name: "join" } | { name: "avatar"; joined: Joined };
 
 const levels: { value: PresetLevel; label: string }[] = [
+  { value: "blank", label: "Blank" },
   { value: "elementary", label: "Elementary" },
   { value: "middle", label: "Middle school" },
   { value: "high", label: "High school" },

@@ -5,7 +5,15 @@ import { useEffect, useRef, useState } from "react";
 
 import { OutputPanel, TIMEOUT_MS } from "@/components/OutputPanel";
 import { baseEditorOptions, defineEditorTheme, EDITOR_THEME } from "@/lib/editor";
-import { runCode, type RunHandle, type RunResult } from "@/lib/editor/runner";
+import {
+  runCode,
+  runTests,
+  type RunHandle,
+  type RunResult,
+  type TestRunHandle,
+  type TestRunResult,
+} from "@/lib/editor/runner";
+import { presets, type PresetId } from "@/lib/problems/presets";
 import type { MonacoEditor } from "@/components/SharedEditor";
 
 // Stable reference so the Editor doesn't re-apply options on every render.
@@ -15,25 +23,68 @@ const options = { ...baseEditorOptions };
  * A private scratch editor for one student. Nothing is synced: the code lives only in this tab,
  * and the student can run it whenever they like, with the output shown only to them.
  */
-export function PersonalEditor({ onEditor }: { onEditor?: (editor: MonacoEditor) => void }) {
+export function PersonalEditor({
+  onEditor,
+  presetId,
+}: {
+  onEditor?: (editor: MonacoEditor) => void;
+  presetId?: PresetId;
+}) {
   const [editor, setEditor] = useState<MonacoEditor>();
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult>();
-  const handle = useRef<RunHandle>(undefined);
+  const [testResult, setTestResult] = useState<TestRunResult>();
+  const handle = useRef<RunHandle | TestRunHandle>(undefined);
+  const loadedPreset = useRef<PresetId | undefined>(undefined);
+  const tests = presetId ? presets[presetId].tests : [];
 
   // Don't leave a worker running if the student leaves mid-run.
   useEffect(() => () => handle.current?.stop(), []);
+
+  // Copy the starter once it arrives from the shared room, without replacing code already typed.
+  useEffect(() => {
+    if (!editor || !presetId || loadedPreset.current === presetId) return;
+    loadedPreset.current = presetId;
+    if (!editor.getValue()) editor.setValue(presets[presetId].sharedText);
+  }, [editor, presetId]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const subscription = editor.onDidChangeModelContent(() => {
+      setResult(undefined);
+      setTestResult(undefined);
+    });
+    return () => subscription.dispose();
+  }, [editor]);
 
   async function run() {
     const code = editor?.getValue();
     if (code === undefined) return;
     const current = runCode(code, { timeoutMs: TIMEOUT_MS });
     handle.current = current;
+    setResult(undefined);
+    setTestResult(undefined);
     setRunning(true);
     const outcome = await current.promise;
     if (handle.current !== current) return;
     handle.current = undefined;
     setResult(outcome);
+    setRunning(false);
+  }
+
+  async function test() {
+    const code = editor?.getValue();
+    if (code === undefined || tests.length === 0) return;
+    const version = editor?.getModel()?.getVersionId();
+    const current = runTests(code, tests, { timeoutMs: TIMEOUT_MS });
+    handle.current = current;
+    setResult(undefined);
+    setTestResult(undefined);
+    setRunning(true);
+    const outcome = await current.promise;
+    if (handle.current !== current) return;
+    handle.current = undefined;
+    if (editor?.getModel()?.getVersionId() === version) setTestResult(outcome);
     setRunning(false);
   }
 
@@ -62,9 +113,11 @@ export function PersonalEditor({ onEditor }: { onEditor?: (editor: MonacoEditor)
       <OutputPanel
         running={running}
         result={result}
+        testResult={testResult}
         onRun={editor ? run : undefined}
+        onRunTests={editor && tests.length > 0 ? test : undefined}
         onStop={stop}
-        emptyText="Press Run to see output here."
+        emptyText={tests.length > 0 ? "Press Run or Run tests to check your code." : "Press Run to see output here."}
       />
     </section>
   );

@@ -1,3 +1,5 @@
+import type { PresetTestCase } from "@/lib/problems/presets";
+
 export type LogLevel = "log" | "info" | "warn" | "error";
 
 export type LogLine = {
@@ -26,14 +28,28 @@ export type RunResult = {
   stopped: boolean;
 };
 
-/** Main thread -> worker. */
-export type WorkerRequest = {
-  type: "run";
-  code: string;
+export type TestCaseResult = {
+  name: string;
+  passed: boolean;
+  expected: string;
+  actual: string;
 };
+
+export type TestRunResult = {
+  cases: TestCaseResult[];
+  error?: RunError;
+  timedOut: boolean;
+  stopped: boolean;
+};
+
+/** Main thread -> worker. */
+export type WorkerRequest =
+  | { type: "run"; code: string }
+  | { type: "test"; code: string; cases: readonly PresetTestCase[] };
 
 /** Worker -> main thread. */
 export type WorkerMessage =
   | { type: "log"; line: LogLine }
+  | { type: "test-result"; result: TestCaseResult }
   | { type: "done" }
   | { type: "error"; error: RunError };

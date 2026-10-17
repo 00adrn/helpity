@@ -1,4 +1,5 @@
 import type { LogLevel, RunError, WorkerMessage, WorkerRequest } from "../types";
+import type { PresetTestCase } from "@/lib/problems/presets";
 
 /** The slice of the worker global scope we use, typed without pulling in the "webworker" lib. */
 type WorkerScope = {
@@ -107,6 +108,42 @@ function patchConsole() {
   }
 }
 
+/** Run each case against a fresh evaluation of the student's code. Starter demo calls are ignored. */
+function runTests(code: string, cases: readonly PresetTestCase[]) {
+  studentLineCount = code.split("\n").length;
+
+  for (const test of cases) {
+    const originalLog = console.log;
+    const output: string[] = [];
+    const expected = JSON.stringify(test.expected);
+    let actual = "undefined";
+    let passed = false;
+
+    try {
+      // Starter files call their functions at the bottom; those calls aren't part of a test.
+      console.log = () => {};
+      const fn: unknown = new Function(`${code}\nreturn ${test.functionName};\n//# sourceURL=${SOURCE_URL}`)();
+      if (typeof fn !== "function") throw new TypeError(`${test.functionName} is not a function`);
+
+      console.log = (...args: unknown[]) => {
+        if (output.length < MAX_LINES) output.push(args.map(format).join(" "));
+      };
+      const returned: unknown = fn(...test.args);
+      actual = test.kind === "output" ? JSON.stringify(output) : JSON.stringify(returned) ?? "undefined";
+      passed = actual === expected;
+    } catch (reason) {
+      const error = toRunError(reason);
+      actual = `${error.name}: ${error.message}${error.line ? ` (line ${error.line})` : ""}`;
+    } finally {
+      console.log = originalLog;
+    }
+
+    post({ type: "test-result", result: { name: test.name, passed, expected, actual } });
+  }
+
+  post({ type: "done" });
+}
+
 // Errors thrown later (setTimeout callbacks, rejected promises) don't pass through the try/catch below.
 scope.addEventListener("error", (event) => {
   event.preventDefault();
@@ -118,7 +155,10 @@ scope.addEventListener("unhandledrejection", (event) => {
 });
 
 scope.addEventListener("message", (event) => {
-  if (event.data.type !== "run") return;
+  if (event.data.type === "test") {
+    runTests(event.data.code, event.data.cases);
+    return;
+  }
   patchConsole();
   studentLineCount = event.data.code.split("\n").length;
   try {

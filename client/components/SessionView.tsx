@@ -10,6 +10,7 @@ import { RemoteCursors } from "@/components/RemoteCursors";
 import { SessionOutput } from "@/components/SessionOutput";
 import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { TopBar } from "@/components/TopBar";
+import { isPresetId, type PresetId } from "@/lib/problems/presets";
 import { useStoredParticipant } from "@/lib/sockets/participant_storage";
 import type { SessionConnection } from "@/lib/sockets/sock";
 
@@ -31,6 +32,24 @@ function useWriterId(meta: SessionConnection["meta"] | undefined): string | null
   return useSyncExternalStore(subscribe, read, () => null);
 }
 
+/** The selected starter is stored in the same shared metadata as the writer. */
+function usePresetId(meta: SessionConnection["meta"] | undefined): PresetId | undefined {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!meta) return () => {};
+      meta.observe(onChange);
+      return () => meta.unobserve(onChange);
+    },
+    [meta],
+  );
+  const read = () => {
+    const value = meta?.get("presetId");
+    return isPresetId(value) ? value : undefined;
+  };
+
+  return useSyncExternalStore(subscribe, read, () => undefined);
+}
+
 /** The live session screen: navbar, participants sidebar, and the class code window. */
 export function SessionView({ code }: { code: string }) {
   const participant = useStoredParticipant(code);
@@ -41,6 +60,7 @@ export function SessionView({ code }: { code: string }) {
   const [lastFocused, setLastFocused] = useState<MonacoEditor>();
   const participants = useParticipants(session?.awareness);
   const writerId = useWriterId(session?.meta);
+  const presetId = usePresetId(session?.meta);
 
   useEffect(() => {
     const subs = [editor, personalEditor].flatMap((ed) =>
@@ -109,7 +129,7 @@ export function SessionView({ code }: { code: string }) {
               getCode={() => editor?.getValue()}
             />
           </section>
-          {!isTeacher && <PersonalEditor onEditor={setPersonalEditor} />}
+          {!isTeacher && <PersonalEditor onEditor={setPersonalEditor} presetId={presetId} />}
         </main>
         <RemoteCursors session={session} />
       </div>
