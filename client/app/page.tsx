@@ -29,7 +29,7 @@ export default function Home() {
       color: "#f97316",
       role: "teacher",
     });
-    router.push(`/s/${code}`);
+    router.push(`/session/${code}`);
   }
 
   async function joinSession(event: React.FormEvent) {
@@ -50,7 +50,7 @@ export default function Home() {
 
     const { code, participant } = result as { code: string; participant: SessionParticipant };
     saveParticipant(code, participant);
-    router.push(`/s/${code}`);
+    router.push(`/session/${code}`);
   }
 
   return (
