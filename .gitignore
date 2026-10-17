@@ -1,0 +1,4 @@
+# Root-level dependencies from a local experiment; the app lives in client/.
+/node_modules/
+/package.json
+/package-lock.json
