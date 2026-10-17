@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import type { ParticipantPresence, SessionConnection } from "@/lib/sockets/sock";
@@ -62,7 +62,51 @@ type ParticipantsPanelProps = {
   writerId: string | null;
   onGrant(studentId: string): void;
   onRevoke(): void;
+  /** Sidebar width in px on wide screens; undefined on narrow ones, where it becomes a top strip. */
+  width?: number;
+  onResize?(width: number): void;
 };
+
+const MIN_WIDTH = 176;
+const MAX_WIDTH = 480;
+
+/** Drag handle on the sidebar's right edge. */
+function SidebarHandle({ width, onResize }: { width: number; onResize: (width: number) => void }) {
+  const [dragging, setDragging] = useState(false);
+  const set = (next: number) => onResize(Math.min(Math.max(next, MIN_WIDTH), MAX_WIDTH));
+
+  function key(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    set(width + (event.key === "ArrowRight" ? 16 : -16));
+  }
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-valuenow={width}
+      aria-valuemin={MIN_WIDTH}
+      aria-valuemax={MAX_WIDTH}
+      tabIndex={0}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={(event) => {
+        if (!dragging) return;
+        const left = event.currentTarget.parentElement?.getBoundingClientRect().left ?? 0;
+        set(event.clientX - left);
+      }}
+      onPointerUp={() => setDragging(false)}
+      onPointerCancel={() => setDragging(false)}
+      onKeyDown={key}
+      className={`absolute inset-y-0 right-0 z-20 w-1.5 cursor-col-resize touch-none outline-none transition hover:bg-accent focus-visible:bg-accent ${
+        dragging ? "bg-accent" : ""
+      }`}
+    />
+  );
+}
 
 /** Left sidebar: everyone connected, raised hands, and (for teachers) who may type. */
 export function ParticipantsPanel({
@@ -72,11 +116,17 @@ export function ParticipantsPanel({
   writerId,
   onGrant,
   onRevoke,
+  width,
+  onResize,
 }: ParticipantsPanelProps) {
   const students = participants.filter((person) => person.role === "student").length;
 
   return (
-    <aside className="relative flex w-60 shrink-0 flex-col overflow-hidden border-r border-border bg-wood">
+    <aside
+      style={width === undefined ? undefined : { width }}
+      className="relative flex max-h-40 shrink-0 flex-col overflow-hidden border-b border-border bg-wood md:max-h-none md:border-r md:border-b-0"
+    >
+      {width !== undefined && onResize && <SidebarHandle width={width} onResize={onResize} />}
       <div className="relative z-10 flex flex-col gap-0.5 border-b border-border px-4 py-3">
         <h2 className="flex items-baseline gap-3">
           <span className="text-xl font-bold text-fg">{isTeacher ? "Participants" : "Here now"}</span>

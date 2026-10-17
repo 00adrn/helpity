@@ -40,7 +40,7 @@ export function OutputPanel({
   const status = testResult ? testStatusText(testResult) : statusText(running, result);
 
   return (
-    <section className="h-40 shrink-0 border-t border-border p-2">
+    <section className="h-full min-h-0 border-t border-border p-2">
       <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface-sunken">
         <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-xs leading-4 font-semibold tracking-[0.3px] text-muted uppercase">
           <span>
