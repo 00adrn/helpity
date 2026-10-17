@@ -24,9 +24,14 @@ const AFTERGLOW_MS = 3000;
 /** Keep requests inside the limits enforced by app/api/ai/route.ts. */
 const MAX_CODE = 30_000;
 const MAX_SELECTION = 10_000;
+const MAX_OUTPUT = 10_000;
 
 /** Asked when Helpity is clicked while code is highlighted. */
 const EXPLAIN_SELECTION = "Explain the highlighted code: what it does and anything worth noticing.";
+
+/** Asked when the student presses Explain in the output panel. */
+const EXPLAIN_OUTPUT =
+  "Explain the console output from running my code: what it means and which part of my code made it.";
 
 /** Idle tricks (see .helpity-fidget-* in globals.css) and how long each plays. */
 const FIDGETS = [
@@ -56,11 +61,22 @@ function readEditorContext(editor: MonacoEditor) {
       model && range && !range.isEmpty()
         ? model.getValueInRange(range).slice(0, MAX_SELECTION)
         : undefined,
+    selectionLines:
+      range && !range.isEmpty()
+        ? { start: range.startLineNumber, end: range.endLineNumber }
+        : undefined,
   };
 }
 
 /** The floating assistant: trails the text cursor, answers questions, and shows its mood. */
-export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
+export function Helpity({
+  editor,
+  explain,
+}: {
+  editor: MonacoEditor | undefined;
+  /** Console output to explain; each new `id` asks again. */
+  explain?: { output: string; id: number };
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const { emotion, angry, enrage, calm, set, flash } = useAssistantMood();
   const [flap, setFlap] = useState(false);
@@ -106,6 +122,22 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
     [],
   );
 
+  // Clicking anywhere outside Helpity closes the panel and drops any question still pending.
+  const panelShown = open || !!answer;
+  useEffect(() => {
+    if (!panelShown) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (ref.current?.contains(event.target as Node)) return;
+      request.current?.abort();
+      clearTimeout(talkTimer.current);
+      setOpen(false);
+      setAnswer(undefined);
+      set("idle");
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [panelShown, set]);
+
   // While idle, Helpity occasionally does a little trick.
   useEffect(() => {
     if (angry || emotion !== "idle") return;
@@ -136,6 +168,16 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
     return () => clearInterval(id);
   }, [emotion]);
 
+  // Explain the output when the student asks from the output panel.
+  const lastExplainId = useRef(explain?.id);
+  useEffect(() => {
+    if (!explain || explain.id === lastExplainId.current || !editor) return;
+    lastExplainId.current = explain.id;
+    setOpen(true);
+    void ask(EXPLAIN_OUTPUT, explain.output.slice(0, MAX_OUTPUT));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [explain, editor]);
+
   if (!editor) return null;
 
   const busy = emotion === "thinking" || emotion === "talking";
@@ -158,7 +200,7 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
     }
   }
 
-  async function ask(text: string) {
+  async function ask(text: string, output?: string) {
     if (!text || !editor) return;
 
     request.current?.abort();
@@ -180,8 +222,9 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
       const result = await askAssistant({
           question: text,
           ...readEditorContext(editor),
+          output,
           // No code goes along with a Verity question, so there is nothing to give feedback on.
-          ...(isAngry && { angry: true, code: "", selection: undefined }),
+          ...(isAngry && { angry: true, code: "", selection: undefined, selectionLines: undefined }),
         }, controller.signal);
       setQuestion("");
       setAnswer(result.answer);

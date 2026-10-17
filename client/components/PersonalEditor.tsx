@@ -3,7 +3,7 @@
 import Editor from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 
-import { OutputPanel, TIMEOUT_MS } from "@/components/OutputPanel";
+import { OutputPanel, outputToText, TIMEOUT_MS } from "@/components/OutputPanel";
 import { baseEditorOptions, defineEditorTheme, EDITOR_THEME } from "@/lib/editor";
 import { runCode, type RunHandle, type RunResult } from "@/lib/editor/runner";
 import type { MonacoEditor } from "@/components/SharedEditor";
@@ -15,7 +15,14 @@ const options = { ...baseEditorOptions };
  * A private scratch editor for one student. Nothing is synced: the code lives only in this tab,
  * and the student can run it whenever they like, with the output shown only to them.
  */
-export function PersonalEditor({ onEditor }: { onEditor?: (editor: MonacoEditor) => void }) {
+export function PersonalEditor({
+  onEditor,
+  onExplain,
+}: {
+  onEditor?: (editor: MonacoEditor) => void;
+  /** A run ended in an error; Helpity should explain the output. */
+  onExplain?: (output: string) => void;
+}) {
   const [editor, setEditor] = useState<MonacoEditor>();
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult>();
@@ -35,6 +42,8 @@ export function PersonalEditor({ onEditor }: { onEditor?: (editor: MonacoEditor)
     handle.current = undefined;
     setResult(outcome);
     setRunning(false);
+    // A crash gets explained automatically.
+    if (outcome.error) onExplain?.(outputToText(outcome));
   }
 
   function stop() {
