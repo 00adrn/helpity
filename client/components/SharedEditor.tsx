@@ -17,11 +17,11 @@ type SharedEditorProps = {
   token: string;
   /** Called with the live connection once opened, and with undefined when it closes. */
   onSession?: (session: SessionConnection | undefined) => void;
-  /** Called with the Monaco editor once it has mounted. */
+  /** Called with the Monaco editor once it has mounted, so other UI (output panel, Helpity) can read its text. */
   onEditor?: (editor: MonacoEditor) => void;
 };
 
-type MonacoEditor = Parameters<OnMount>[0];
+export type MonacoEditor = Parameters<OnMount>[0];
 
 // Stable reference: the Editor re-applies options whenever this object changes,
 // which would undo the read-only state that bindSharedEditor manages.
@@ -56,7 +56,7 @@ export function SharedEditor({ code, participant, token, onSession, onEditor }: 
 
   return (
     <Editor
-      height="80%"
+      height="100%"
       language="javascript"
       onMount={handleMount}
       options={options}
