@@ -3,7 +3,7 @@
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { useEffect, useState } from "react";
 
-import { baseEditorOptions } from "@/lib/editor";
+import { baseEditorOptions, defineEditorTheme, EDITOR_THEME } from "@/lib/editor";
 import {
   connectToSession,
   type SessionConnection,
@@ -31,7 +31,7 @@ const options = { ...baseEditorOptions, readOnly: true };
 /** The shared code window, synced live through the session's Yjs room. */
 export function SharedEditor({ code, participant, token, onSession, onEditor }: SharedEditorProps) {
   const [editor, setEditor] = useState<MonacoEditor>();
-  const { id, name, color, role } = participant;
+  const { id, name, color, role, avatar } = participant;
 
   const handleMount: OnMount = (mounted) => {
     setEditor(mounted);
@@ -42,7 +42,7 @@ export function SharedEditor({ code, participant, token, onSession, onEditor }: 
   useEffect(() => {
     if (!editor) return;
 
-    const session = connectToSession(code, { id, name, color, role }, token);
+    const session = connectToSession(code, { id, name, color, role, avatar }, token);
     onSession?.(session);
     session.bindSharedEditor(editor).catch(() => {
       // The session was closed before Monaco finished loading y-monaco.
@@ -52,12 +52,14 @@ export function SharedEditor({ code, participant, token, onSession, onEditor }: 
       onSession?.(undefined);
       session.close();
     };
-  }, [editor, code, id, name, color, role, token, onSession]);
+  }, [editor, code, id, name, color, role, avatar, token, onSession]);
 
   return (
     <Editor
       height="100%"
       language="javascript"
+      theme={EDITOR_THEME}
+      beforeMount={defineEditorTheme}
       onMount={handleMount}
       options={options}
     />
