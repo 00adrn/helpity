@@ -16,7 +16,7 @@ export function HelpityLogo({ size = "md" }: { size?: "md" | "lg" }) {
           alt=""
           width={icon}
           height={icon}
-          className="-rotate-[22.28deg]"
+          className="-translate-x-px -translate-y-px -rotate-[22.28deg]"
         />
       </span>
       <span

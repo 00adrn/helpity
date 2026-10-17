@@ -1,5 +1,7 @@
 import type { BeforeMount, EditorProps } from "@monaco-editor/react";
 
+import { codeSizeOptions, getCodeSize, subscribeCodeSize } from "./codeSize";
+
 /** Options for every Monaco editor: autocomplete is off so it doesn't solve problems for kids. */
 export const baseEditorOptions: EditorProps["options"] = {
   minimap: { enabled: false },
@@ -30,14 +32,34 @@ export const baseEditorOptions: EditorProps["options"] = {
 
 export const EDITOR_THEME = "helpity";
 
+// Monaco is one global instance shared by every editor, so this runs once.
+let codeSizeWired = false;
+
+/**
+ * Apply the user's code size (see codeSize.ts) to every editor, now and whenever it changes.
+ * This goes through Monaco rather than the `options` prop, because SharedEditor needs its
+ * options object to never change (changing it would reset read-only).
+ */
+function wireCodeSize(monaco: Parameters<BeforeMount>[0]) {
+  if (codeSizeWired) return;
+  codeSizeWired = true;
+  const apply = (editor: { updateOptions(options: object): void }) =>
+    editor.updateOptions(codeSizeOptions(getCodeSize()));
+  // Wait a tick so the editor's own options are in place first.
+  monaco.editor.onDidCreateEditor((editor) => queueMicrotask(() => apply(editor)));
+  subscribeCodeSize(() => monaco.editor.getEditors().forEach(apply));
+}
+
 /** Register the Helpity editor colors (Figma "editor/*" tokens) before Monaco mounts. */
 export const defineEditorTheme: BeforeMount = (monaco) => {
+  wireCodeSize(monaco);
   monaco.editor.defineTheme(EDITOR_THEME, {
     base: "vs",
     inherit: true,
     rules: [
-      { token: "comment", foreground: "6d5842" },
-      { token: "keyword", foreground: "78516d" },
+      // Brighter than the Figma tokens so kids can spot keywords and comments at a glance.
+      { token: "comment", foreground: "2f7a8f", fontStyle: "italic" },
+      { token: "keyword", foreground: "b0277f", fontStyle: "bold" },
       { token: "number", foreground: "7d5b27" },
       { token: "string", foreground: "8f4738" },
     ],

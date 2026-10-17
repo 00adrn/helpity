@@ -89,8 +89,12 @@ export function ResultsPanel({
   if (watched) {
     const submitted = watched.progress?.code;
     return (
-      <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
+      // A green focus ring and header: this is a student's code, not the class code.
+      <section className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-accent bg-surface">
+        {/* Drawn inside the panel (the split pane would clip an outer ring) and above the editor. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] ring-4 ring-accent/30 ring-inset" />
+        {/* 4px more on top, left and right for the ring, so the buttons look centered. */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-accent/40 bg-accent-subtle/40 px-5 pt-3.5 pb-2.5">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -137,7 +141,7 @@ export function ResultsPanel({
 
   return (
     <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
-      <h2 className="border-b border-border px-4 py-2.5 text-lg font-bold text-fg">Practice results</h2>
+      <h2 className="border-b border-border px-4 py-2.5 text-lg font-bold text-fg">Student practice results</h2>
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="grid min-w-[420px] grid-cols-[minmax(0,1.2fr)_minmax(0,1.6fr)_auto_auto] items-center gap-x-4 border-b border-border px-4 py-2 text-xs font-semibold tracking-[0.3px] text-muted uppercase">
           <span>Student</span>

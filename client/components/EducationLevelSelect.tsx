@@ -9,8 +9,7 @@ export const LEVELS: { value: PresetLevel; label: string }[] = [
   { value: "elementary", label: "Elementary" },
   { value: "middle", label: "Middle School" },
   { value: "high", label: "High School" },
-  // An empty session with no tests (the "blank" preset).
-  { value: "blank", label: "Blank file" },
+  // The empty "blank" preset is a link under the problem picker instead.
 ];
 
 type EducationLevelSelectProps = {

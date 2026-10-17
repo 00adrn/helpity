@@ -34,6 +34,16 @@ const EXPLAIN_SELECTION =
   "Explain the highlighted code: what it does and anything worth noticing.";
 const HIGHLIGHT_FIRST =
   "Highlight some code first, then click me and I'll explain it!";
+/** Things Helpity says without asking Gemini, when the session tells it something happened. */
+const NOTICES = {
+  readOnly:
+    "Sorry! You can't edit the teacher's code! Raise your hand to give it a try or highlight some code to ask a question!",
+  canWrite: "Your teacher gave you a turn! You can type in the teacher's code now.",
+  turnOver: "Your turn in the teacher's code is over. Nice work!",
+} as const;
+const NOTICE_MS = 6000;
+
+export type HelpityNotice = { kind: keyof typeof NOTICES; id: number };
 
 /** Asked when the student presses Explain in the output panel. */
 const EXPLAIN_OUTPUT =
@@ -59,7 +69,7 @@ type MonacoEditor = MonacoNs.IStandaloneCodeEditor;
  * explanation; only after an answer can the student "Ask another question?".
  */
 type Bubble =
-  | { kind: "hint" }
+  | { kind: "hint"; text: string }
   | { kind: "thinking" }
   | { kind: "answer"; text: string; failed: boolean };
 
@@ -94,10 +104,13 @@ function readEditorContext(editor: MonacoEditor) {
 export function Helpity({
   editor,
   explain,
+  notice,
 }: {
   editor: MonacoEditor | undefined;
   /** Console output to explain; each new `id` asks again. */
   explain?: { output: string; id: number };
+  /** Something to say right away; each new `id` says it again. */
+  notice?: HelpityNotice;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { emotion, angry, enrage, calm, set, flash } = useAssistantMood();
@@ -122,6 +135,14 @@ export function Helpity({
     setBubble(undefined);
     setAskingMore(false);
     setQuestion("");
+  }
+
+  /** A canned message: no Gemini call, and it goes away by itself. */
+  function showHint(text: string, ms: number) {
+    reset();
+    setBubble({ kind: "hint", text });
+    flash("thinking", 1200);
+    hintTimer.current = setTimeout(() => setBubble(undefined), ms);
   }
 
   async function ask(text: string, output?: string) {
@@ -277,6 +298,15 @@ export function Helpity({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [explain, editor]);
 
+  // Say what the session asked Helpity to say.
+  const lastNoticeId = useRef(notice?.id);
+  useEffect(() => {
+    if (!notice || notice.id === lastNoticeId.current) return;
+    lastNoticeId.current = notice.id;
+    showHint(NOTICES[notice.kind], NOTICE_MS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notice]);
+
   if (!editor) return null;
 
   // Only waiting for an answer blocks clicks; the talking animation doesn't.
@@ -297,9 +327,7 @@ export function Helpity({
     }
     if (!editor || !readEditorContext(editor).selection) {
       reset();
-      setBubble({ kind: "hint" });
-      flash("thinking", 1200);
-      hintTimer.current = setTimeout(() => setBubble(undefined), HINT_MS);
+      showHint(HIGHLIGHT_FIRST, HINT_MS);
       return;
     }
     void ask(EXPLAIN_SELECTION);
@@ -367,7 +395,7 @@ export function Helpity({
           {/* Right padding keeps the text clear of the × */}
           <div className="py-2.5 pr-8 pl-3 text-sm leading-5">
             {bubble.kind === "hint" && (
-              <p className="text-muted">{HIGHLIGHT_FIRST}</p>
+              <p className="text-muted">{bubble.text}</p>
             )}
             {bubble.kind === "thinking" && (
               <p className="text-muted">Hmm, let me look at that…</p>

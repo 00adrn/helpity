@@ -20,6 +20,8 @@ type ProblemPickerProps = {
   onCreate(presetId: PresetId): void;
   busy?: boolean;
   error?: string;
+  /** The button's label; the teacher flow says "Next" because naming comes after. */
+  actionLabel?: string;
 };
 
 /** "Select a problem type": pick an education level, then swipe through its problems. */
@@ -27,6 +29,7 @@ export function ProblemPicker({
   onCreate,
   busy = false,
   error,
+  actionLabel = "Create session",
 }: ProblemPickerProps) {
   const [level, setLevel] = useState<PresetLevel | null>(null);
   // No problems until a level is picked, then just that level's.
@@ -36,12 +39,9 @@ export function ProblemPicker({
         .filter(([, preset]) => preset.level === level)
         .map(([id, preset]) => ({
           id,
-          // The concept is the "problem type"; Blank has none to show.
-          title: id === "blank" ? preset.title : preset.concept,
-          detail:
-            id === "blank"
-              ? "Both code windows start empty. No tests."
-              : `${preset.title} · ${preset.tests.length} tests`,
+          // The concept is the "problem type".
+          title: preset.concept,
+          detail: `${preset.title} · ${preset.tests.length} tests`,
         })),
     [level],
   );
@@ -70,9 +70,9 @@ export function ProblemPicker({
 
       {/* The selected problem sits in the middle; neighbours fade out to the sides. */}
       <div className="relative flex w-full flex-col items-center">
-        {/* Centered in the whole gap between the dropdown and the button (the button's mt-10 included). */}
+        {/* Centered in the gap between the dropdown and the "Make a blank file" link. */}
         {!level && (
-          <p className="absolute inset-x-0 top-0 -bottom-10 flex items-center justify-center text-center text-xl font-semibold text-muted">
+          <p className="absolute inset-x-0 top-0 bottom-0 flex items-center justify-center text-center text-xl font-semibold text-muted">
             Choose an education level to see its problems.
           </p>
         )}
@@ -131,14 +131,25 @@ export function ProblemPicker({
         />
       </div>
 
+      {/* Skips the problems: both code windows start empty, with no tests. */}
+      <button
+        data-no-drag
+        type="button"
+        onClick={() => onCreate("blank")}
+        disabled={busy}
+        className="mt-4 text-base font-semibold text-accent underline-offset-2 hover:underline disabled:opacity-50"
+      >
+        Make a blank file
+      </button>
+
       <button
         data-no-drag
         type="button"
         onClick={() => selected && onCreate(selected.id)}
         disabled={busy || !selected}
-        className={`${pickerButton} mt-10`}
+        className={`${pickerButton} mt-8`}
       >
-        {busy ? "Creating…" : "Create session"}
+        {busy ? "Creating…" : actionLabel}
       </button>
       {error && (
         <p role="alert" className="mt-4 text-sm text-red-600">

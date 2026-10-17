@@ -13,6 +13,15 @@ export const AVATARS = [
   { id: "cyclops", name: "Cyclops" },
   { id: "octopus", name: "Octopus" },
   { id: "axolotl", name: "Axolotl" },
+  { id: "lion", name: "Lion" },
+  { id: "koala", name: "Koala" },
+  { id: "turtle", name: "Turtle" },
+  { id: "shark", name: "Shark" },
+  { id: "ghost", name: "Ghost" },
+  { id: "rabbit", name: "Rabbit" },
+  { id: "sloth", name: "Sloth" },
+  { id: "bear", name: "Bear" },
+  { id: "cat", name: "Cat" },
 ] as const;
 
 export type AvatarId = (typeof AVATARS)[number]["id"];
