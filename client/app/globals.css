@@ -31,6 +31,19 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Tailwind's reset makes buttons use the default arrow; show that they are clickable. */
+@layer base {
+  button:not(:disabled),
+  select:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
 body {
   background: var(--bg);
   color: var(--fg);

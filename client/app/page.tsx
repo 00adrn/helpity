@@ -195,7 +195,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setStep({ name: "join" })}
-            className="flex w-70 flex-col items-center gap-1 rounded-xl bg-accent p-6 text-on-accent shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="flex w-70 max-w-full flex-col items-center gap-1 rounded-xl bg-accent p-6 text-on-accent shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             <span className="text-xl font-bold">I&apos;m a student</span>
             <span className="text-sm font-medium">Join with a code</span>
@@ -204,7 +204,7 @@ export default function Home() {
             type="button"
             onClick={openQuestionPicker}
             disabled={busy}
-            className="flex w-70 flex-col items-center gap-1 rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+            className="flex w-70 max-w-full flex-col items-center gap-1 rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
           >
             <span className="text-xl font-bold text-fg">I&apos;m a teacher</span>
             <span className="text-sm font-medium text-muted">Start a session</span>
