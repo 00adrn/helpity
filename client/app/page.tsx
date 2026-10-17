@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -9,6 +10,9 @@ import { button } from "@/components/button";
 import { HelpityLogo } from "@/components/HelpityLogo";
 import { saveParticipant } from "@/lib/sockets/participant_storage";
 import type { SessionParticipant } from "@/lib/sockets/sock";
+
+// three.js needs WebGL, so the bouncing ball only loads in the browser.
+const BouncingHelpity = dynamic(() => import("@/components/BouncingHelpity"), { ssr: false });
 
 type Joined = { code: string; participant: SessionParticipant };
 
@@ -135,8 +139,9 @@ export default function Home() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-bg px-6">
-      <div className="flex flex-col items-center">
+    <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-bg px-6">
+      <BouncingHelpity />
+      <div className="relative z-10 flex flex-col items-center">
         <h1>
           <HelpityLogo size="lg" />
         </h1>
