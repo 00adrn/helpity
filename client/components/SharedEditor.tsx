@@ -17,7 +17,7 @@ type SharedEditorProps = {
   token: string;
   /** Called with the live connection once opened, and with undefined when it closes. */
   onSession?: (session: SessionConnection | undefined) => void;
-  /** Called with the Monaco editor once it has mounted, so other UI can read its text. */
+  /** Called with the Monaco editor once it has mounted, so other UI (output panel, Helpity) can read its text. */
   onEditor?: (editor: MonacoEditor) => void;
 };
 
@@ -32,6 +32,11 @@ const options = { ...baseEditorOptions, readOnly: true };
 export function SharedEditor({ code, participant, token, onSession, onEditor }: SharedEditorProps) {
   const [editor, setEditor] = useState<MonacoEditor>();
   const { id, name, color, role } = participant;
+
+  const handleMount: OnMount = (mounted) => {
+    setEditor(mounted);
+    onEditor?.(mounted);
+  };
 
   // Connect and bind once Monaco has mounted; close() tears everything down.
   useEffect(() => {
@@ -53,10 +58,7 @@ export function SharedEditor({ code, participant, token, onSession, onEditor }: 
     <Editor
       height="100%"
       language="javascript"
-      onMount={(mounted) => {
-        setEditor(mounted);
-        onEditor?.(mounted);
-      }}
+      onMount={handleMount}
       options={options}
     />
   );

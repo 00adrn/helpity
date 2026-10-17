@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { Helpity } from "@/components/Helpity";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { RemoteCursors } from "@/components/RemoteCursors";
 import { SessionOutput } from "@/components/SessionOutput";
@@ -53,6 +54,7 @@ export function SessionView({ code }: { code: string }) {
         <RemoteCursors session={session} />
         <ParticipantsPanel awareness={session?.awareness} selfId={participant.id} />
       </div>
+      <Helpity editor={editor} />
     </div>
   );
 }
