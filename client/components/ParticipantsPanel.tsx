@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 
+import { HandIcon } from "@/components/Icons";
 import { Avatar } from "@/components/Avatar";
 import type { ParticipantPresence, SessionConnection } from "@/lib/sockets/sock";
 
@@ -153,7 +154,7 @@ export function ParticipantsPanel({
               </span>
               {person.raisedHand && (
                 <span role="img" aria-label="Hand raised" title="Hand raised">
-                  ✋
+                  <HandIcon />
                 </span>
               )}
             </>

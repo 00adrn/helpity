@@ -12,6 +12,8 @@ export type Session = {
   presetId: PresetId;
   initialText: string;
   documentState?: Uint8Array;
+  /** Each student's private code window, keyed by participant id. */
+  studentStates?: Map<string, Uint8Array>;
 };
 
 // Kept on globalThis so hot reloads in dev don't create a fresh, empty Map.

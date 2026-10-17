@@ -49,17 +49,17 @@ export function OutputPanel({
           <div className="flex items-center gap-2">
             {running && onStop && (
               <button type="button" onClick={onStop} className={`${headerButton} bg-red-600`}>
-                ■ Stop
+                <span className="font-glyph">■</span> Stop
               </button>
             )}
             {!running && onRun && (
               <button type="button" onClick={onRun} className={`${headerButton} bg-accent`}>
-                ▶ Run
+                <span className="font-glyph">▶</span> Run
               </button>
             )}
             {!running && onRunTests && (
               <button type="button" onClick={onRunTests} className={`${headerButton} bg-accent`}>
-                ✓ Run tests
+                <span className="font-glyph">✓</span> Run tests
               </button>
             )}
           </div>
@@ -80,7 +80,7 @@ export function OutputPanel({
           )}
           {testResult?.cases.map((test, i) => (
             <div key={i} className={test.passed ? "text-green-700" : "text-red-700"}>
-              <span className="font-sans font-semibold">{test.passed ? "✓" : "✗"} {test.name}</span>
+              <span className="font-sans font-semibold"><span className="font-glyph">{test.passed ? "✓" : "✗"}</span> {test.name}</span>
               {!test.passed && (
                 <pre className="font-mono whitespace-pre-wrap text-xs text-muted">
                   {`Expected: ${test.expected}\nGot: ${test.actual}`}
