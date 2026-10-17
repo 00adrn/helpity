@@ -13,6 +13,7 @@
     "@liveblocks/client": "^3.24.3",
     "@liveblocks/yjs": "^3.24.3",
     "@monaco-editor/react": "^4.7.0",
+    "dotenv": "^18.0.8",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
