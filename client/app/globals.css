@@ -11,6 +11,9 @@
   --muted: #5e5147;
   --accent: #6b895b;
   --accent-subtle: #c1ccbb;
+  /* Light greens from the primary color: the student's own code window ("Try it yourself!"). */
+  --accent-wash: #e4eedb;
+  --accent-wash-sunken: #d5e3ca;
   --on-accent: #fffaf1;
   --helpity: #ffb703;
 }
@@ -25,6 +28,8 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-subtle: var(--accent-subtle);
+  --color-accent-wash: var(--accent-wash);
+  --color-accent-wash-sunken: var(--accent-wash-sunken);
   --color-on-accent: var(--on-accent);
   --color-helpity: var(--helpity);
   --font-sans: var(--font-quicksand);
@@ -224,3 +229,21 @@ body {
     animation: none !important;
   }
 }
+
+/*
+ * The student's own code window ("Try it yourself!") is tinted green so they know it's theirs.
+ * Inside it the surface tokens are swapped for the greens, so the header and output follow.
+ * Monaco has one theme for every editor on the page, so its colors are overridden here too.
+ */
+.code-mine {
+  --surface: var(--accent-wash);
+  --surface-sunken: var(--accent-wash-sunken);
+}
+.code-mine .monaco-editor {
+  --vscode-editor-background: var(--accent-wash);
+  --vscode-editorGutter-background: var(--accent-wash);
+  --vscode-editorStickyScroll-background: var(--accent-wash);
+  --vscode-editor-lineHighlightBackground: var(--accent-wash-sunken);
+  --vscode-editor-lineHighlightBorder: transparent;
+}
+

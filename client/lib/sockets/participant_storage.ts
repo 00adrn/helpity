@@ -15,6 +15,15 @@ export function saveParticipant(code: string, participant: SessionParticipant) {
   }
 }
 
+/** Forget who this tab is in a session, so going back doesn't rejoin it. */
+export function forgetParticipant(code: string) {
+  try {
+    sessionStorage.removeItem(keyFor(code));
+  } catch {
+    // Nothing was stored if storage is blocked.
+  }
+}
+
 function readRaw(code: string): string | null {
   try {
     return sessionStorage.getItem(keyFor(code));

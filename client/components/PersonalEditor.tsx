@@ -119,10 +119,10 @@ export function PersonalEditor({
   }
 
   return (
-    <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface">
+    <section className="code-mine flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <h2 className="font-bold text-fg">
-          My code{presetId && (
+          Try it yourself!{presetId && (
             <span className="ml-2 text-sm font-normal text-muted">
               · {presetId === "blank" ? "Blank file" : `${presets[presetId].concept}: ${presets[presetId].title}`}
             </span>

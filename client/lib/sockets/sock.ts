@@ -145,6 +145,29 @@ export function connectToSession(
       }
       meta.set("writerId", writerId);
     },
+    /**
+     * Mark the session as over; every student's screen switches to "session ended".
+     * Resolves once the server has the change (or after 3s), so it's safe to close afterwards.
+     */
+    endSession(): Promise<void> {
+      if (closed) throw new Error("The session connection is closed");
+      if (participant.role !== "teacher") throw new Error("Only the teacher can end the session");
+      meta.set("ended", true);
+      return new Promise((resolve) => {
+        const done = () => {
+          if (provider.hasUnsyncedChanges) return;
+          provider.off("unsyncedChanges", done);
+          clearTimeout(timeout);
+          resolve();
+        };
+        const timeout = setTimeout(() => {
+          provider.off("unsyncedChanges", done);
+          resolve();
+        }, 3000);
+        provider.on("unsyncedChanges", done);
+        done();
+      });
+    },
     /** Detach every editor, disconnect the provider, and destroy the Yjs document. */
     close() {
       if (closed) return;
