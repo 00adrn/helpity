@@ -196,9 +196,9 @@ export function ParticipantsPanel({
       <Image
         src="/sapling.png"
         alt=""
-        width={360}
-        height={360}
-        className="pointer-events-none absolute -bottom-[104px] -left-16 size-[360px] max-w-none [image-rendering:pixelated]"
+        width={240}
+        height={240}
+        className="pointer-events-none absolute -bottom-[69px] left-1/2 size-[240px] -translate-x-1/2 max-w-none [image-rendering:pixelated]"
       />
     </aside>
   );

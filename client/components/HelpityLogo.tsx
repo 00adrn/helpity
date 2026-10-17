@@ -3,7 +3,8 @@ import Image from "next/image";
 /** The tilted smiley plus "Helpity" wordmark. "lg" on the landing page, "md" in the navbar. */
 export function HelpityLogo({ size = "md" }: { size?: "md" | "lg" }) {
   const large = size === "lg";
-  const icon = large ? 27 : 18;
+  // The art's circle fills ~91% of the image, so this keeps the smiley the same visual size.
+  const icon = large ? 30 : 20;
 
   return (
     <span className="inline-flex items-end">

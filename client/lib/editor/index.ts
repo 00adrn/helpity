@@ -13,6 +13,8 @@ export const baseEditorOptions: EditorProps["options"] = {
   overviewRulerLanes: 0,
   overviewRulerBorder: false,
   hideCursorInOverviewRuler: true,
+  // No "·" dots for spaces inside a highlight.
+  renderWhitespace: "none",
   scrollBeyondLastLine: false,
   automaticLayout: true,
   quickSuggestions: false,
@@ -46,6 +48,11 @@ export const defineEditorTheme: BeforeMount = (monaco) => {
       "editorLineNumber.activeForeground": "#3e332b",
       "editor.lineHighlightBackground": "#f5f1e9",
       "editor.lineHighlightBorder": "#f5f1e9",
+      // Highlights are Helpity yellow (#ffed00), since highlighting is how you summon Helpity.
+      // The inactive color keeps the highlight visible while the student clicks Helpity.
+      "editor.selectionBackground": "#ffed0099",
+      "editor.inactiveSelectionBackground": "#ffed0080",
+      "editor.selectionHighlightBackground": "#ffed0040",
       // Brackets in the plain text color, even if bracket colorization is on.
       ...Object.fromEntries(
         [1, 2, 3, 4, 5, 6].map((n) => [`editorBracketHighlight.foreground${n}`, "#3e332b"]),
