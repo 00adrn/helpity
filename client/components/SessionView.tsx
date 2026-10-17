@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
+import { RemoteCursors } from "@/components/RemoteCursors";
 import { SessionOutput } from "@/components/SessionOutput";
 import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { useStoredParticipant } from "@/lib/sockets/participant_storage";
@@ -49,6 +50,7 @@ export function SessionView({ code }: { code: string }) {
             getCode={() => editor?.getValue()}
           />
         </div>
+        <RemoteCursors session={session} />
         <ParticipantsPanel awareness={session?.awareness} selfId={participant.id} />
       </div>
     </div>
