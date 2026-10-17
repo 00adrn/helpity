@@ -2,18 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
-import { randomAvatar, type AvatarId } from "@/components/Avatar";
+import type { AvatarId } from "@/components/Avatar";
 import { AvatarPicker } from "@/components/AvatarPicker";
 import { button } from "@/components/button";
 import { HelpityLogo } from "@/components/HelpityLogo";
-import {
-  isPresetId,
-  presets,
-  type PresetId,
-  type PresetLevel,
-} from "@/lib/problems/presets";
 import { saveParticipant } from "@/lib/sockets/participant_storage";
 import type { SessionParticipant } from "@/lib/sockets/sock";
 
@@ -24,76 +18,14 @@ type Joined = { code: string; participant: SessionParticipant };
 
 type Step = { name: "choose" } | { name: "join" } | { name: "avatar"; joined: Joined };
 
-const levels: { value: PresetLevel; label: string }[] = [
-  { value: "elementary", label: "Elementary" },
-  { value: "middle", label: "Middle school" },
-  { value: "high", label: "High school" },
-];
-
-/** Show the landing page, question picker, student join form, or avatar picker. */
+/** Show the landing page, student join form, or avatar picker. Teachers go to /teach. */
 export default function Home() {
   const router = useRouter();
-  const questionDialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState<Step>({ name: "choose" });
-  const [presetId, setPresetId] = useState<PresetId | "">("");
-  const [teacherError, setTeacherError] = useState<string>();
   const [joinCode, setJoinCode] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-
-  /** Open the teacher's question picker before creating a session. */
-  function openQuestionPicker() {
-    setTeacherError(undefined);
-    questionDialog.current?.showModal();
-  }
-
-  /** Dismiss the question picker without creating a session. */
-  function closeQuestionPicker() {
-    questionDialog.current?.close();
-  }
-
-  /** Create a session with the selected starter and save the teacher's identity. */
-  async function startSession(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
-    if (!isPresetId(presetId)) {
-      setTeacherError("Choose a question first");
-      return;
-    }
-
-    setTeacherError(undefined);
-    setBusy(true);
-
-    try {
-      const response = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ presetId }),
-      });
-
-      if (!response.ok) {
-        setTeacherError("Could not start a session");
-        return;
-      }
-
-      const { code } = (await response.json()) as { code: string };
-      // No sign-in yet (Auth0 comes later), so whoever starts a session is its teacher.
-      saveParticipant(code, {
-        id: crypto.randomUUID(),
-        name: "Teacher",
-        color: "#f97316",
-        role: "teacher",
-        avatar: randomAvatar(),
-      });
-      closeQuestionPicker();
-      router.push(`/session/${code}`);
-    } catch {
-      setTeacherError("Could not start a session");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   /** Check the code before asking the student to choose an avatar. */
   async function checkJoinCode(event: React.FormEvent) {
@@ -207,65 +139,14 @@ export default function Home() {
           </button>
           <button
             type="button"
-            onClick={openQuestionPicker}
-            disabled={busy}
-            className="flex w-70 flex-col items-center gap-1 rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+            onClick={() => router.push("/teach")}
+            className="flex w-70 flex-col items-center gap-1 rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             <span className="text-xl font-bold text-fg">I&apos;m a teacher</span>
             <span className="text-sm font-medium text-muted">Start a session</span>
           </button>
         </div>
-
       </div>
-
-      <dialog
-        ref={questionDialog}
-        aria-labelledby="question-dialog-title"
-        onCancel={(event) => {
-          if (busy) event.preventDefault();
-        }}
-        className="m-auto w-full max-w-sm rounded-xl border border-border bg-surface p-6 text-fg backdrop:bg-black/40"
-      >
-        <form onSubmit={startSession} className="flex flex-col gap-4">
-          <h2 id="question-dialog-title" className="text-xl font-bold">
-            Choose a question
-          </h2>
-          <label htmlFor="preset" className="text-sm font-semibold text-muted">
-            Question
-          </label>
-          <select
-            id="preset"
-            value={presetId}
-            onChange={(event) => setPresetId(event.target.value as PresetId | "")}
-            required
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-fg"
-          >
-            <option value="" disabled>
-              Select a question
-            </option>
-            {levels.map((level) => (
-              <optgroup key={level.value} label={level.label}>
-                {Object.entries(presets)
-                  .filter(([, preset]) => preset.level === level.value)
-                  .map(([id, preset]) => (
-                    <option key={id} value={id}>
-                      {preset.title}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
-          </select>
-          {teacherError && <p role="alert" className="text-sm text-red-600">{teacherError}</p>}
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeQuestionPicker} disabled={busy} className={button.secondary}>
-              Cancel
-            </button>
-            <button type="submit" disabled={busy} className={button.primary}>
-              {busy ? "Starting…" : "Start session"}
-            </button>
-          </div>
-        </form>
-      </dialog>
     </main>
   );
 }

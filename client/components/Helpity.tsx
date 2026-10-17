@@ -3,6 +3,7 @@
 import type { editor as MonacoNs } from "monaco-editor";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { button } from "@/components/button";
 import { askAssistant, RateLimitError } from "@/lib/ai";
 import { EMOTION_SPRITE, spriteUrl, useAssistantMood, type Sprite } from "@/lib/ai/emotion";
 import { useCursorFollower } from "@/lib/ai/useCursorFollower";
@@ -15,12 +16,15 @@ const TALK_MS_MIN = 1200;
 const TALK_MS_MAX = 6000;
 /** How long the model's chosen mood is held after it finishes speaking. */
 const AFTERGLOW_MS = 3000;
+/** How long the "highlight some code" nudge stays up. */
+const HINT_MS = 4000;
 /** Keep requests inside the limits enforced by app/api/ai/route.ts. */
 const MAX_CODE = 30_000;
 const MAX_SELECTION = 10_000;
 
 /** Asked when Helpity is clicked while code is highlighted. */
 const EXPLAIN_SELECTION = "Explain the highlighted code: what it does and anything worth noticing.";
+const HIGHLIGHT_FIRST = "Highlight some code first, then click me and I'll explain it!";
 
 /** Idle tricks (see .helpity-fidget-* in globals.css) and how long each plays. */
 const FIDGETS = [
@@ -36,6 +40,15 @@ const FIDGET_MAX_MS = 6000;
 const ALL_SPRITES: Sprite[] = ["flat", "happy", "think", "open"];
 
 type MonacoEditor = MonacoNs.IStandaloneCodeEditor;
+
+/**
+ * What Helpity's bubble shows. The flow is fixed: highlight code and click Helpity to get an
+ * explanation; only after an answer can the student "Ask another question?".
+ */
+type Bubble =
+  | { kind: "hint" }
+  | { kind: "thinking" }
+  | { kind: "answer"; text: string; failed: boolean };
 
 /** What the assistant needs to know about the editor at the moment of asking. */
 function readEditorContext(editor: MonacoEditor) {
@@ -54,34 +67,49 @@ function readEditorContext(editor: MonacoEditor) {
   };
 }
 
-/** The floating assistant: trails the text cursor, answers questions, and shows its mood. */
+/**
+ * The floating assistant. Highlight code and click it for an explanation; then "Ask another
+ * question?" for follow-ups. Questions always use the code in `editor`, which must be the code
+ * window the student is working in.
+ */
 export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
   const ref = useRef<HTMLDivElement>(null);
   const { emotion, set, flash } = useAssistantMood();
   const [flap, setFlap] = useState(false);
   const [fidget, setFidget] = useState<(typeof FIDGETS)[number]["name"]>();
-  const [open, setOpen] = useState(false);
   // Parked in the corner unless text is highlighted.
   const [following, setFollowing] = useState(false);
+  const [bubble, setBubble] = useState<Bubble>();
+  const [askingMore, setAskingMore] = useState(false);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<string>();
   const request = useRef<AbortController>(undefined);
   const talkTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hintTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useCursorFollower(editor, ref, SIZE, following);
 
-  // Helpity only leaves its corner while code is highlighted.
+  /** Close the bubble and forget the conversation. */
+  function reset() {
+    request.current?.abort();
+    clearTimeout(talkTimer.current);
+    clearTimeout(hintTimer.current);
+    setBubble(undefined);
+    setAskingMore(false);
+    setQuestion("");
+  }
+
+  // Helpity only leaves its corner while code is highlighted. Un-highlighting ends the chat.
   useEffect(() => {
     if (!editor) return;
     let wasFollowing = false;
     const sub = editor.onDidChangeCursorSelection((e) => {
       const next = !e.selection.isEmpty();
-      // Heading back to the corner closes the prompt, and drops any question still pending.
       if (wasFollowing && !next) {
         request.current?.abort();
         clearTimeout(talkTimer.current);
-        setOpen(false);
-        setAnswer(undefined);
+        setBubble(undefined);
+        setAskingMore(false);
+        setQuestion("");
         set("idle");
       }
       wasFollowing = next;
@@ -95,6 +123,7 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
     () => () => {
       request.current?.abort();
       clearTimeout(talkTimer.current);
+      clearTimeout(hintTimer.current);
     },
     [],
   );
@@ -131,41 +160,53 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
 
   if (!editor) return null;
 
-  const busy = emotion === "thinking" || emotion === "talking";
+  // Only waiting for an answer blocks clicks; the talking animation doesn't.
+  const busy = bubble?.kind === "thinking";
   const sprite = emotion === "talking" && flap ? "flat" : EMOTION_SPRITE[emotion];
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    void ask(question.trim());
+  // The only way to summon Helpity: highlight code, then click. Monaco keeps its selection
+  // while focus is on Helpity, so the highlight is still there when this runs.
+  function handleClick() {
+    if (busy) return;
+    if (bubble && bubble.kind !== "hint") {
+      reset();
+      return;
+    }
+    if (!editor || !readEditorContext(editor).selection) {
+      reset();
+      setBubble({ kind: "hint" });
+      flash("thinking", 1200);
+      hintTimer.current = setTimeout(() => setBubble(undefined), HINT_MS);
+      return;
+    }
+    void ask(EXPLAIN_SELECTION);
   }
 
-  // Clicking while code is highlighted explains it right away; otherwise toggle the panel.
-  // Monaco keeps its selection while focus is elsewhere, so the highlight is still there.
-  function handleClick() {
-    const hasSelection = !!editor && !!readEditorContext(editor).selection;
-    if (hasSelection && !busy) {
-      setOpen(true);
-      void ask(EXPLAIN_SELECTION);
-    } else {
-      setOpen((o) => !o);
-    }
+  function submitFollowUp(event: FormEvent) {
+    event.preventDefault();
+    const text = question.trim();
+    if (!text) return;
+    setAskingMore(false);
+    setQuestion("");
+    void ask(text);
   }
 
   async function ask(text: string) {
-    if (!text || !editor) return;
+    if (!editor) return;
 
     request.current?.abort();
     clearTimeout(talkTimer.current);
+    clearTimeout(hintTimer.current);
     const controller = new AbortController();
     request.current = controller;
 
-    setAnswer(undefined);
+    setBubble({ kind: "thinking" });
     set("thinking");
 
     try {
+      // Always the editor the student is working in: its code, cursor and current highlight.
       const result = await askAssistant({ question: text, ...readEditorContext(editor) }, controller.signal);
-      setQuestion("");
-      setAnswer(result.answer);
+      setBubble({ kind: "answer", text: result.answer, failed: false });
       set("talking");
 
       const talkMs = Math.min(
@@ -175,11 +216,14 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
       talkTimer.current = setTimeout(() => flash(result.emotion, AFTERGLOW_MS), talkMs);
     } catch (error) {
       if (controller.signal.aborted) return;
-      setAnswer(
-        error instanceof RateLimitError
-          ? `Whoa, slow down! I need a little break. Ask me again in ${error.retryAfterSeconds} seconds.`
-          : "Oops, I couldn't answer that. Try again in a moment.",
-      );
+      setBubble({
+        kind: "answer",
+        failed: true,
+        text:
+          error instanceof RateLimitError
+            ? `Whoa, slow down! I need a little break. Ask me again in ${error.retryAfterSeconds} seconds.`
+            : "Oops, I couldn't answer that. Try again in a moment.",
+      });
       flash("error", AFTERGLOW_MS);
     }
   }
@@ -192,8 +236,8 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
     >
       <button
         type="button"
-        aria-label="Helpity assistant"
-        aria-expanded={open}
+        aria-label={following ? "Ask Helpity about the highlighted code" : "Helpity"}
+        aria-expanded={!!bubble}
         onClick={handleClick}
         className={`helpity helpity-${emotion} pointer-events-auto block h-full w-full cursor-pointer`}
       >
@@ -217,44 +261,62 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
         </span>
       </button>
 
-      {(open || answer) && (
-        // data-side / data-vert are set by useCursorFollower so the panel flips near edges.
-        <div
-          className="pointer-events-auto absolute top-full left-0 mt-2 w-72 rounded-2xl border border-zinc-300 bg-white p-3 text-sm text-zinc-900 shadow-lg group-data-[side=left]:right-0 group-data-[side=left]:left-auto group-data-[vert=up]:top-auto group-data-[vert=up]:bottom-full group-data-[vert=up]:mt-0 group-data-[vert=up]:mb-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+      {bubble && (
+        // data-side / data-vert are set by useCursorFollower so the bubble flips near edges.
+        <section
+          aria-live="polite"
+          className="pointer-events-auto absolute top-full left-0 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-surface text-fg shadow-sm group-data-[side=left]:right-0 group-data-[side=left]:left-auto group-data-[vert=up]:top-auto group-data-[vert=up]:bottom-full group-data-[vert=up]:mt-0 group-data-[vert=up]:mb-2"
         >
-          {answer && (
-            <div className="mb-2 flex items-start gap-2">
-              <p className="max-h-48 flex-1 overflow-y-auto whitespace-pre-wrap">{answer}</p>
-              <button
-                type="button"
-                aria-label="Dismiss answer"
-                onClick={() => setAnswer(undefined)}
-                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-              >
-                ×
-              </button>
-            </div>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={reset}
+            className="absolute top-2 right-2 rounded px-1 text-base leading-none text-muted transition hover:bg-surface-sunken hover:text-fg"
+          >
+            ×
+          </button>
+
+          {/* Right padding keeps the text clear of the × */}
+          <div className="py-2.5 pr-8 pl-3 text-sm leading-5">
+            {bubble.kind === "hint" && <p className="text-muted">{HIGHLIGHT_FIRST}</p>}
+            {bubble.kind === "thinking" && <p className="text-muted">Hmm, let me look at that…</p>}
+            {bubble.kind === "answer" && (
+              <p className={`max-h-48 overflow-y-auto whitespace-pre-wrap ${bubble.failed ? "text-red-700" : ""}`}>
+                {bubble.text}
+              </p>
+            )}
+          </div>
+
+          {/* Follow-ups only after a real answer. */}
+          {bubble.kind === "answer" && !bubble.failed && (
+            <footer className="border-t border-border px-3 py-2">
+              {askingMore ? (
+                <form onSubmit={submitFollowUp} className="flex gap-2">
+                  <input
+                    autoFocus
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder="Ask about your code…"
+                    maxLength={4000}
+                    className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg placeholder:text-muted/70 focus:outline-2 focus:outline-accent"
+                  />
+                  <button type="submit" disabled={busy || !question.trim()} className={button.primary}>
+                    Ask
+                  </button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAskingMore(true)}
+                  disabled={busy}
+                  className="text-sm font-semibold text-accent transition hover:underline disabled:opacity-50"
+                >
+                  Ask another question?
+                </button>
+              )}
+            </footer>
           )}
-          {open && (
-            <form onSubmit={submit} className="flex gap-2">
-              <input
-                autoFocus
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ask about your code…"
-                maxLength={4000}
-                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
-              />
-              <button
-                type="submit"
-                disabled={busy || !question.trim()}
-                className="rounded-lg bg-yellow-400 px-3 py-1 font-medium text-black disabled:opacity-50"
-              >
-                Ask
-              </button>
-            </form>
-          )}
-        </div>
+        </section>
       )}
     </div>
   );
