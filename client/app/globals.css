@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
+/* Design tokens, mirrored from the Figma "Tokens" collection. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f5f1e9;
+  --wood: #f5f1e9;
+  --surface: #fdfbf7;
+  --surface-sunken: #f5f1e9;
+  --border: #c9c2b7;
+  --fg: #3e332b;
+  --muted: #5e5147;
+  --accent: #6b895b;
+  --accent-subtle: #c1ccbb;
+  --on-accent: #fffaf1;
+  --helpity: #ffb703;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-bg: var(--bg);
+  --color-wood: var(--wood);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-on-accent: var(--on-accent);
+  --color-helpity: var(--helpity);
+  --font-sans: var(--font-quicksand);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-quicksand), system-ui, sans-serif;
 }

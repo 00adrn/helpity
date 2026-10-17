@@ -10,6 +10,8 @@ export type SessionParticipant = {
   name: string;
   color: string;
   role: "teacher" | "student";
+  /** Avatar id picked when joining (see components/Avatar.tsx). */
+  avatar?: string;
 };
 
 /**
@@ -34,7 +36,7 @@ export function connectToSession(
   const provider = new HocuspocusProvider({
     // NEXT_PUBLIC_COLLAB_URL points at a standalone dev server (see dev/collab-server.mjs).
     url:
-      process.env.NEXT_PUBLIC_COLLAB_URL ??
+      process.env.NEXT_PUBLIC_COLLAB_URL ||
       `${protocol}//${window.location.host}/collab`,
     name: `session:${code}`,
     document: doc,
@@ -60,6 +62,7 @@ export function connectToSession(
       name: participant.name,
       color: participant.color,
       role: participant.role,
+      avatar: participant.avatar,
       raisedHand,
     });
   }
