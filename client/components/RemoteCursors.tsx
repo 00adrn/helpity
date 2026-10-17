@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import type { ParticipantPresence, SessionConnection } from "@/lib/sockets/sock";
 
-type Awareness = SessionConnection["awareness"];
+type Awareness = SessionConnection["awareness"] | NonNullable<import("@hocuspocus/provider").HocuspocusProvider["awareness"]>;
 
 /**
  * y-monaco publishes every participant's cursor through awareness and marks it in the editor with
@@ -31,12 +31,27 @@ export function RemoteCursors({ session }: { session: SessionConnection | undefi
   return <style>{css}</style>;
 }
 
-function buildCss(awareness: Awareness, writerId: unknown): string {
+/** Cursors for a student's private code room: only the student and the watching teacher are in it, so show everyone. */
+export function PresenceCursors({ awareness }: { awareness: Awareness | undefined }) {
+  const [css, setCss] = useState("");
+
+  useEffect(() => {
+    if (!awareness) return;
+    const update = () => setCss(buildCss(awareness, undefined, true));
+    update();
+    awareness.on("change", update);
+    return () => awareness.off("change", update);
+  }, [awareness]);
+
+  return <style>{css}</style>;
+}
+
+function buildCss(awareness: Awareness, writerId: unknown, everyone = false): string {
   let css = "";
   for (const [clientId, state] of awareness.getStates()) {
     const person = (state as { participant?: ParticipantPresence }).participant;
     if (!person) continue;
-    const canEdit = person.role === "teacher" || person.id === writerId;
+    const canEdit = everyone || person.role === "teacher" || person.id === writerId;
     // Colors and names come from other browsers and end up in a stylesheet, so only accept safe values.
     if (!canEdit || !/^#[0-9a-f]{6}$/i.test(person.color)) continue;
 

@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
+import { PencilIcon } from "@/components/Icons";
 import { Helpity } from "@/components/Helpity";
 import { PersonalEditor } from "@/components/PersonalEditor";
 import { ParticipantsPanel, useParticipants } from "@/components/ParticipantsPanel";
 import { RemoteCursors } from "@/components/RemoteCursors";
 import { SplitPane, useMinWidth } from "@/components/SplitPane";
+import { ResultsPanel } from "@/components/ResultsPanel";
 import { SessionOutput } from "@/components/SessionOutput";
 import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { TopBar } from "@/components/TopBar";
@@ -91,7 +93,11 @@ export function SessionView({ code }: { code: string }) {
   const writer = participants.find((person) => person.id === writerId);
   const canWrite = isTeacher || writerId === participant.id;
   const status = canWrite
-    ? "You can type here ✏️"
+    ? (
+        <>
+          You can type here <PencilIcon />
+        </>
+      )
     : writer
       ? `${writer.name} is typing`
       : "Watching the teacher";
@@ -149,7 +155,14 @@ export function SessionView({ code }: { code: string }) {
         />
         <main className="flex min-h-0 min-w-0 flex-1 p-3">
           {isTeacher ? (
-            classCode
+            <SplitPane
+              direction={wide ? "horizontal" : "vertical"}
+              minA={wide ? 240 : 160}
+              minB={wide ? 240 : 160}
+              className="flex-1"
+              a={classCode}
+              b={<ResultsPanel session={session} participants={participants} code={code} me={participant} />}
+            />
           ) : (
             <SplitPane
               direction={wide ? "horizontal" : "vertical"}
@@ -161,6 +174,9 @@ export function SessionView({ code }: { code: string }) {
                 <PersonalEditor
                   onEditor={setPersonalEditor}
                   presetId={presetId}
+                  onSubmit={(submission) => session?.submitProgress(submission)}
+                  code={code}
+                  participant={participant}
                   onExplain={(output) => {
                     setLastFocused(personalEditor);
                     setExplain((prev) => ({ output, id: (prev?.id ?? 0) + 1 }));

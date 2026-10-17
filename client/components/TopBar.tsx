@@ -1,3 +1,4 @@
+import { HandIcon } from "@/components/Icons";
 import { button } from "@/components/button";
 import { HelpityLogo } from "@/components/HelpityLogo";
 
@@ -27,7 +28,7 @@ export function TopBar({ code, isTeacher, raisedHand, onToggleHand }: TopBarProp
             aria-pressed={raisedHand}
             className={raisedHand ? button.primary : button.secondary}
           >
-            {raisedHand ? "✋ Lower hand" : "✋ Raise hand"}
+            <HandIcon /> {raisedHand ? "Lower hand" : "Raise hand"}
           </button>
         )}
       </div>
