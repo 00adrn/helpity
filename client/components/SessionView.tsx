@@ -40,6 +40,8 @@ export function SessionView({ code }: { code: string }) {
   const [personalEditor, setPersonalEditor] = useState<MonacoEditor>();
   // Helpity follows whichever code window the user touched last.
   const [lastFocused, setLastFocused] = useState<MonacoEditor>();
+  // Output the student wants explained; the id makes asking twice in a row count as new.
+  const [explain, setExplain] = useState<{ output: string; id: number }>();
   const participants = useParticipants(session?.awareness);
   const writerId = useWriterId(session?.meta);
   const wide = useMinWidth(768);
@@ -133,13 +135,21 @@ export function SessionView({ code }: { code: string }) {
               minB={wide ? 240 : 160}
               className="flex-1"
               a={classCode}
-              b={<PersonalEditor onEditor={setPersonalEditor} />}
+              b={
+                <PersonalEditor
+                  onEditor={setPersonalEditor}
+                  onExplain={(output) => {
+                    setLastFocused(personalEditor);
+                    setExplain((prev) => ({ output, id: (prev?.id ?? 0) + 1 }));
+                  }}
+                />
+              }
             />
           )}
         </main>
         <RemoteCursors session={session} />
       </div>
-      <Helpity editor={helpityEditor} />
+      <Helpity editor={helpityEditor} explain={explain} />
     </div>
   );
 }

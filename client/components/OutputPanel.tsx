@@ -42,16 +42,18 @@ export function OutputPanel({
           <span>
             Output{status && <span className="normal-case"> · {status}</span>}
           </span>
-          {running && onStop && (
-            <button type="button" onClick={onStop} className={`${headerButton} bg-red-600`}>
-              ■ Stop
-            </button>
-          )}
-          {!running && onRun && (
-            <button type="button" onClick={onRun} className={`${headerButton} bg-accent`}>
-              ▶ Run
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {running && onStop && (
+              <button type="button" onClick={onStop} className={`${headerButton} bg-red-600`}>
+                ■ Stop
+              </button>
+            )}
+            {!running && onRun && (
+              <button type="button" onClick={onRun} className={`${headerButton} bg-accent`}>
+                ▶ Run
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-3 py-2 font-mono text-sm leading-6">
           {result?.logs.map((line, i) => (
@@ -74,6 +76,16 @@ export function OutputPanel({
       </div>
     </section>
   );
+}
+
+/** The output as plain text, for sending to Helpity. */
+export function outputToText(result: RunResult): string {
+  const lines = result.logs.map((line) => `${line.level}: ${line.text}`);
+  if (result.error) {
+    const where = result.error.line !== undefined ? ` (line ${result.error.line})` : "";
+    lines.push(`Uncaught ${result.error.name}: ${result.error.message}${where}`);
+  }
+  return lines.join("\n");
 }
 
 function statusText(running: boolean, result: RunResult | undefined) {
