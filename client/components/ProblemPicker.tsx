@@ -41,7 +41,7 @@ export function ProblemPicker({
           detail:
             id === "blank"
               ? "Both code windows start empty. No tests."
-              : `Class example: ${preset.teacherTitle} → Practice: ${preset.title} · ${preset.tests.length} tests`,
+              : `${preset.title} · ${preset.tests.length} tests`,
         })),
     [level],
   );
