@@ -5,6 +5,6 @@
 - `useCursorFollower.ts`: moves an element to trail Monaco's text cursor, leaning as it moves.
 - The UI lives in `components/Helpity.tsx`: click the face to ask a question. While the request runs it shows `thinking`, then `talking` for a time based on answer length, then the mood the model picked (`happy` or `thinking`). Failures show `error`.
 
-Set `GEMINI_API_KEY` in `client/.env.local`. `GEMINI_MODEL` is optional and defaults to `gemini-2.5-flash`. Add user authentication and request limits before exposing this endpoint publicly.
+Set `GEMINI_API_KEY` in `client/.env.local`. `GEMINI_MODEL` is optional and defaults to `gemini-3.1-flash-lite`. Add user authentication and request limits before exposing this endpoint publicly.
 
 Later: streaming (so `talking` follows real tokens), conversation history, and an explicit action for applying suggested edits to the shared document.

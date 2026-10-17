@@ -8,7 +8,7 @@ import {
 } from "@/lib/types";
 
 /** Used when GEMINI_MODEL isn't set. */
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 
 const SYSTEM_INSTRUCTION = `You are Helpity, a friendly yellow smiley face who helps kids learn to code.
 You float next to the code they are writing.
