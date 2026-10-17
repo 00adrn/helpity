@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import next from "next";
 import crossws from "crossws/adapters/node";
 import { Hocuspocus } from "@hocuspocus/server";
+import * as Y from "yjs";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT ?? 3000);
@@ -16,15 +17,39 @@ const sessions = (globalThis.__sessions ??= new Map());
 const app = next({ dev, hostname: "localhost", port });
 const handleRequest = app.getRequestHandler();
 
+/** Find the in-memory session that owns a Hocuspocus document. */
+function getDocumentSession(documentName) {
+  if (!documentName.startsWith("session:")) return undefined;
+  return sessions.get(documentName.slice("session:".length));
+}
+
 const hocuspocus = new Hocuspocus({
   quiet: true,
   // Rooms are named `session:CODE` (see lib/sockets/sock.ts).
   async onAuthenticate({ documentName }) {
-    const code = documentName.startsWith("session:") ? documentName.slice("session:".length) : "";
-
-    if (!sessions.has(code)) {
+    if (!getDocumentSession(documentName)) {
       throw new Error("No live session has that code");
     }
+  },
+  // Load the chosen starter or the latest edits when a room opens.
+  async onLoadDocument({ documentName }) {
+    const session = getDocumentSession(documentName);
+    if (!session) throw new Error("No live session has that code");
+
+    const document = new Y.Doc();
+    if (session.documentState) {
+      Y.applyUpdate(document, session.documentState);
+    } else {
+      document.getText("content").insert(0, session.initialText);
+      document.getMap("meta").set("presetId", session.presetId);
+    }
+    return document;
+  },
+  // Keep edits in memory after the last participant disconnects.
+  async onStoreDocument({ documentName, document }) {
+    const session = getDocumentSession(documentName);
+    if (!session) throw new Error("No live session has that code");
+    session.documentState = Y.encodeStateAsUpdate(document);
   },
 });
 

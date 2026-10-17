@@ -1,5 +1,7 @@
 import { randomInt } from "node:crypto";
 
+import { presets, type PresetId } from "@/lib/problems/presets";
+
 // THIS FILE IS THE SESSION DATA STORE FOR OUR APPLICATION
 // ON THE SERVER. IT PROVIDES FUNCTIONS RELATED TO THE MOVEMENT
 // OF SESSION DATA.
@@ -7,6 +9,9 @@ import { randomInt } from "node:crypto";
 export type Session = {
   code: string;
   createdAt: number;
+  presetId: PresetId;
+  initialText: string;
+  documentState?: Uint8Array;
 };
 
 // Kept on globalThis so hot reloads in dev don't create a fresh, empty Map.
@@ -28,11 +33,16 @@ export function createRoomCode(): string {
 };
 
 /** Make a new session with an unused code, remember it, and return it. */
-export function createSession(): Session {
+export function createSession(presetId: PresetId): Session {
   while (true) {
-    const code = createRoomCode()
+    const code = createRoomCode();
     if (!sessions.has(code)) {
-      const session = { code, createdAt: Date.now() };
+      const session: Session = {
+        code,
+        createdAt: Date.now(),
+        presetId,
+        initialText: presets[presetId].sharedText,
+      };
       sessions.set(code, session);
       return session;
     }
@@ -42,5 +52,5 @@ export function createSession(): Session {
 /** Look up a live session by its code (any casing). */
 export function getSession(code: string): Session | undefined {
   const standardCode = code.trim().toUpperCase();
-  return sessions.get(standardCode)
+  return sessions.get(standardCode);
 }
