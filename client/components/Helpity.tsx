@@ -73,7 +73,9 @@ export function Helpity({ editor }: { editor: MonacoEditor | undefined }) {
   // Helpity only leaves its corner while code is highlighted.
   useEffect(() => {
     if (!editor) return;
-    let wasFollowing = false;
+    // A new editor starts from its own selection state.
+    let wasFollowing = !editor.getSelection()?.isEmpty();
+    queueMicrotask(() => setFollowing(wasFollowing));
     const sub = editor.onDidChangeCursorSelection((e) => {
       const next = !e.selection.isEmpty();
       // Heading back to the corner closes the prompt, and drops any question still pending.

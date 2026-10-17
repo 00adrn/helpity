@@ -44,13 +44,15 @@ export function useCursorFollower(
     followRef.current = follow;
   }, [follow]);
 
+  // Survives a change of editor, so Helpity glides to the new window instead of snapping.
+  const motion = useRef({ x: 0, y: 0, placed: false });
+
   useEffect(() => {
     const el = ref.current;
     if (!editor || !el) return;
 
     const findFreeSpot = createFreeSpotFinder(editor, size);
-    const cur = { x: 0, y: 0 };
-    let placed = false;
+    const cur = motion.current;
     let frame = 0;
 
     const tick = () => {
@@ -78,10 +80,10 @@ export function useCursorFollower(
 
       const target = findFreeSpot(rect, { x: targetX, y: targetY });
 
-      if (!placed) {
+      if (!cur.placed) {
         cur.x = target.x;
         cur.y = target.y;
-        placed = true;
+        cur.placed = true;
       }
 
       const dx = target.x - cur.x;
