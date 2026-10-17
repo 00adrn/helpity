@@ -3,12 +3,14 @@ export type PresetLevel = "blank" | "elementary" | "middle" | "high";
 /** Concepts appear in this order when a teacher chooses a problem. */
 export const concepts = [
   "Printing a string",
+  "Comparing numbers",
   "Multiplying numbers",
   "Loops and conditions",
   "Adding numbers",
   "Working with strings",
   "Divisibility",
   "Searching arrays",
+  "Recursion",
 ] as const;
 
 export type PresetConcept = (typeof concepts)[number] | "Blank";
@@ -72,28 +74,32 @@ foobar("Foo", "bar");`,
     ],
   },
 
-  greet: {
-    title: "Say Hello",
+  largerNumber: {
+    title: "Find the Larger Number",
     level: "elementary",
-    concept: "Printing a string",
-    teacherTitle: "Say Goodbye",
-    teacherCode: `// Teacher example: build a message with a name and print it.
-function sayGoodbye(name) {
-  console.log("Goodbye, " + name + "!");
+    concept: "Comparing numbers",
+    teacherTitle: "Check Which Number Is Greater",
+    teacherCode: `// Teacher example: compare two numbers and return whether the first is greater.
+function isGreaterThan(first, second) {
+  if (first > second) {
+    return true;
+  }
+  return false;
 }
 
-sayGoodbye("Ada");`,
-    studentCode: `// Practice: greet someone using their name.
-function greet(name) {
-  // TODO: Print "Hello, " followed by the name and "!".
-  // HINT: Join "Hello, " and name with +.
+console.log(isGreaterThan(7, 3));`,
+    studentCode: `// Practice: return the larger of two numbers.
+function largerNumber(first, second) {
+  // TODO: Compare first and second, then return the larger one.
+  // HINT: Use an if statement with > to compare them.
 }
 
-greet("Ada");`,
+console.log(largerNumber(3, 7));`,
     tests: [
-      { name: "Greet Ada", functionName: "greet", args: ["Ada"], kind: "output", expected: ["Hello, Ada!"] },
-      { name: "Greet Sam", functionName: "greet", args: ["Sam"], kind: "output", expected: ["Hello, Sam!"] },
-      { name: "Greet an empty name", functionName: "greet", args: [""], kind: "output", expected: ["Hello, !"] },
+      { name: "Second number is larger", functionName: "largerNumber", args: [3, 7], kind: "return", expected: 7 },
+      { name: "First number is larger", functionName: "largerNumber", args: [9, 2], kind: "return", expected: 9 },
+      { name: "Equal numbers", functionName: "largerNumber", args: [4, 4], kind: "return", expected: 4 },
+      { name: "Negative numbers", functionName: "largerNumber", args: [-3, -8], kind: "return", expected: -3 },
     ],
   },
 
@@ -277,8 +283,38 @@ console.log(binarySearch([1, 3, 5, 7, 9], 7));`,
       { name: "Find 7", functionName: "binarySearch", args: [[1, 3, 5, 7, 9], 7], kind: "return", expected: 3 },
       { name: "Find first", functionName: "binarySearch", args: [[1, 3, 5, 7, 9], 1], kind: "return", expected: 0 },
       { name: "Find last", functionName: "binarySearch", args: [[1, 3, 5, 7, 9], 9], kind: "return", expected: 4 },
+      { name: "Find only item", functionName: "binarySearch", args: [[42], 42], kind: "return", expected: 0 },
       { name: "Missing target", functionName: "binarySearch", args: [[1, 3, 5, 7, 9], 4], kind: "return", expected: -1 },
       { name: "Empty array", functionName: "binarySearch", args: [[], 4], kind: "return", expected: -1 },
+    ],
+  },
+
+  factorial: {
+    title: "Calculate a Factorial",
+    level: "high",
+    concept: "Recursion",
+    teacherTitle: "Sum Numbers Recursively",
+    teacherCode: `// Teacher example: solve a smaller version of the same problem.
+function sumTo(number) {
+  if (number === 0) return 0;
+  return number + sumTo(number - 1);
+}
+
+console.log(sumTo(4));`,
+    studentCode: `// Practice: return the factorial of a nonnegative integer.
+function factorial(number) {
+  if (number === 0) return 1;
+
+  // TODO: Multiply number by the factorial of number - 1.
+  // HINT: Call factorial again with a smaller number.
+}
+
+console.log(factorial(4));`,
+    tests: [
+      { name: "Zero factorial", functionName: "factorial", args: [0], kind: "return", expected: 1 },
+      { name: "One factorial", functionName: "factorial", args: [1], kind: "return", expected: 1 },
+      { name: "Four factorial", functionName: "factorial", args: [4], kind: "return", expected: 24 },
+      { name: "Six factorial", functionName: "factorial", args: [6], kind: "return", expected: 720 },
     ],
   },
 } as const satisfies Record<string, Preset>;
