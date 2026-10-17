@@ -3,6 +3,7 @@
 import Editor from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 
+import { SplitPane } from "@/components/SplitPane";
 import { OutputPanel, outputToText, TIMEOUT_MS } from "@/components/OutputPanel";
 import { baseEditorOptions, defineEditorTheme, EDITOR_THEME } from "@/lib/editor";
 import { runCode, type RunHandle, type RunResult } from "@/lib/editor/runner";
@@ -51,29 +52,40 @@ export function PersonalEditor({
   }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
+    <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <h2 className="font-bold text-fg">My code</h2>
       </div>
-      <div className="min-h-0 flex-1">
-        <Editor
-          height="100%"
-          language="javascript"
-          theme={EDITOR_THEME}
-          beforeMount={defineEditorTheme}
-          onMount={(mounted) => {
-            setEditor(mounted);
-            onEditor?.(mounted);
-          }}
-          options={options}
-        />
-      </div>
-      <OutputPanel
-        running={running}
-        result={result}
-        onRun={editor ? run : undefined}
-        onStop={stop}
-        emptyText="Press Run to see output here."
+      <SplitPane
+        direction="vertical"
+        initial={0.7}
+        minA={120}
+        minB={96}
+        className="flex-1"
+        a={
+          <div className="min-h-0 flex-1">
+            <Editor
+              height="100%"
+              language="javascript"
+              theme={EDITOR_THEME}
+              beforeMount={defineEditorTheme}
+              onMount={(mounted) => {
+                setEditor(mounted);
+                onEditor?.(mounted);
+              }}
+              options={options}
+            />
+          </div>
+        }
+        b={
+          <OutputPanel
+            running={running}
+            result={result}
+            onRun={editor ? run : undefined}
+            onStop={stop}
+            emptyText="Press Run to see output here."
+          />
+        }
       />
     </section>
   );
