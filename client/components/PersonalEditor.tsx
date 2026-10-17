@@ -44,11 +44,11 @@ export function PersonalEditor({
   // Don't leave a worker running if the student leaves mid-run.
   useEffect(() => () => handle.current?.stop(), []);
 
-  // Copy the starter once it arrives from the shared room, without replacing code already typed.
+  // Load the student's practice starter once the selected problem arrives from the shared room.
   useEffect(() => {
     if (!editor || !presetId || loadedPreset.current === presetId) return;
     loadedPreset.current = presetId;
-    if (!editor.getValue()) editor.setValue(presets[presetId].sharedText);
+    if (!editor.getValue()) editor.setValue(presets[presetId].studentCode);
   }, [editor, presetId]);
 
   useEffect(() => {
@@ -100,7 +100,13 @@ export function PersonalEditor({
   return (
     <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <h2 className="font-bold text-fg">My code</h2>
+        <h2 className="font-bold text-fg">
+          My code{presetId && (
+            <span className="ml-2 text-sm font-normal text-muted">
+              · {presetId === "blank" ? "Blank file" : `${presets[presetId].concept}: ${presets[presetId].title}`}
+            </span>
+          )}
+        </h2>
       </div>
       <div className="min-h-0 flex-1">
         <Editor

@@ -1,5 +1,18 @@
 export type PresetLevel = "blank" | "elementary" | "middle" | "high";
 
+/** Concepts appear in this order when a teacher chooses a problem. */
+export const concepts = [
+  "Printing a string",
+  "Multiplying numbers",
+  "Loops and conditions",
+  "Adding numbers",
+  "Working with strings",
+  "Divisibility",
+  "Searching arrays",
+] as const;
+
+export type PresetConcept = (typeof concepts)[number] | "Blank";
+
 export type TestValue = string | number | boolean | null | readonly TestValue[];
 
 export type PresetTestCase = {
@@ -14,7 +27,12 @@ export type PresetTestCase = {
 export type Preset = {
   title: string;
   level: PresetLevel;
-  sharedText: string;
+  concept: PresetConcept;
+  teacherTitle: string;
+  /** Shared lesson example; it uses a different function from the student exercise. */
+  teacherCode: string;
+  /** Private starter checked by `tests`. */
+  studentCode: string;
   tests: readonly PresetTestCase[];
 };
 
@@ -22,14 +40,25 @@ export const presets = {
   blank: {
     title: "Blank file",
     level: "blank",
-    sharedText: "",
+    concept: "Blank",
+    teacherTitle: "Blank file",
+    teacherCode: "",
+    studentCode: "",
     tests: [],
   },
 
   foobar: {
     title: "FooBar",
     level: "elementary",
-    sharedText: `// Combine two words and print the result.
+    concept: "Printing a string",
+    teacherTitle: "Print two words with a space",
+    teacherCode: `// Teacher example: join two words and print them.
+function printWords(first, second) {
+  console.log(first + " " + second);
+}
+
+printWords("Hello", "class");`,
+    studentCode: `// Practice: combine two words and print the result without a space.
 function foobar(foo, bar) {
   // TODO: Combine foo and bar, then print the result.
   // HINT: You can join strings with +.
@@ -46,7 +75,15 @@ foobar("Foo", "bar");`,
   greet: {
     title: "Say Hello",
     level: "elementary",
-    sharedText: `// Greet someone using their name.
+    concept: "Printing a string",
+    teacherTitle: "Say Goodbye",
+    teacherCode: `// Teacher example: build a message with a name and print it.
+function sayGoodbye(name) {
+  console.log("Goodbye, " + name + "!");
+}
+
+sayGoodbye("Ada");`,
+    studentCode: `// Practice: greet someone using their name.
 function greet(name) {
   // TODO: Print "Hello, " followed by the name and "!".
   // HINT: Join "Hello, " and name with +.
@@ -63,7 +100,15 @@ greet("Ada");`,
   doubleNumber: {
     title: "Double a Number",
     level: "elementary",
-    sharedText: `// Return a number that is twice the input.
+    concept: "Multiplying numbers",
+    teacherTitle: "Triple a Number",
+    teacherCode: `// Teacher example: multiply a number and return the answer.
+function tripleNumber(number) {
+  return number * 3;
+}
+
+console.log(tripleNumber(4));`,
+    studentCode: `// Practice: return a number that is twice the input.
 function doubleNumber(number) {
   // TODO: Return number multiplied by 2.
 }
@@ -79,7 +124,21 @@ console.log(doubleNumber(4));`,
   fizzbuzz: {
     title: "FizzBuzz",
     level: "middle",
-    sharedText: `// Print the numbers from 1 to max with Fizz and Buzz substitutions.
+    concept: "Loops and conditions",
+    teacherTitle: "Print Even or Odd",
+    teacherCode: `// Teacher example: use a loop and a condition to classify numbers.
+function printEvenOdd(max) {
+  for (let number = 1; number <= max; number += 1) {
+    if (number % 2 === 0) {
+      console.log("Even");
+    } else {
+      console.log("Odd");
+    }
+  }
+}
+
+printEvenOdd(5);`,
+    studentCode: `// Practice: print the numbers from 1 to max with Fizz and Buzz substitutions.
 function fizzbuzz(max) {
   for (let num = 1; num <= max; num += 1) {
     // TODO: Print Fizz for multiples of 3, Buzz for multiples of 5,
@@ -99,7 +158,15 @@ fizzbuzz(15);`,
   sumArray: {
     title: "Sum an Array",
     level: "middle",
-    sharedText: `// Add up every number in an array.
+    concept: "Adding numbers",
+    teacherTitle: "Add Two Numbers",
+    teacherCode: `// Teacher example: add two numbers and return their sum.
+function addTwoNumbers(first, second) {
+  return first + second;
+}
+
+console.log(addTwoNumbers(2, 4));`,
+    studentCode: `// Practice: add up every number in an array.
 function sumArray(numbers) {
   let total = 0;
 
@@ -121,7 +188,17 @@ console.log(sumArray([2, 4, 6]));`,
   reverseString: {
     title: "Reverse a String",
     level: "middle",
-    sharedText: `// Return the characters of a string in reverse order.
+    concept: "Working with strings",
+    teacherTitle: "Print Letters Backward",
+    teacherCode: `// Teacher example: visit each letter from the end of a word.
+function printLettersBackward(text) {
+  for (let index = text.length - 1; index >= 0; index -= 1) {
+    console.log(text[index]);
+  }
+}
+
+printLettersBackward("cat");`,
+    studentCode: `// Practice: return the characters of a string in reverse order.
 function reverseString(text) {
   let reversed = "";
 
@@ -144,7 +221,15 @@ console.log(reverseString("hello"));`,
   isPrime: {
     title: "Check for a Prime Number",
     level: "high",
-    sharedText: `// Return true only when number has no divisors other than 1 and itself.
+    concept: "Divisibility",
+    teacherTitle: "Check Divisibility",
+    teacherCode: `// Teacher example: check whether one number divides another evenly.
+function isDivisible(number, divisor) {
+  return number % divisor === 0;
+}
+
+console.log(isDivisible(12, 3));`,
+    studentCode: `// Practice: return true only when number has no divisors other than 1 and itself.
 function isPrime(number) {
   if (number < 2) return false;
 
@@ -166,7 +251,18 @@ console.log(isPrime(17));`,
   binarySearch: {
     title: "Binary Search",
     level: "high",
-    sharedText: `// Find a target in a sorted array and return its index, or -1 if absent.
+    concept: "Searching arrays",
+    teacherTitle: "Search One Item at a Time",
+    teacherCode: `// Teacher example: check each item until the target is found.
+function linearSearch(numbers, target) {
+  for (let index = 0; index < numbers.length; index += 1) {
+    if (numbers[index] === target) return index;
+  }
+  return -1;
+}
+
+console.log(linearSearch([1, 3, 5, 7, 9], 7));`,
+    studentCode: `// Practice: find a target in a sorted array and return its index, or -1 if absent.
 function binarySearch(sortedNumbers, target) {
   let left = 0;
   let right = sortedNumbers.length - 1;

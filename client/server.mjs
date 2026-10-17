@@ -31,7 +31,7 @@ const hocuspocus = new Hocuspocus({
       throw new Error("No live session has that code");
     }
   },
-  // Load the chosen starter or the latest edits when a room opens.
+  // Load the teacher's example or the latest shared edits when a room opens.
   async onLoadDocument({ documentName }) {
     const session = getDocumentSession(documentName);
     if (!session) throw new Error("No live session has that code");

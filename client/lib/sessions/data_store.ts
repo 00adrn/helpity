@@ -41,7 +41,7 @@ export function createSession(presetId: PresetId): Session {
         code,
         createdAt: Date.now(),
         presetId,
-        initialText: presets[presetId].sharedText,
+        initialText: presets[presetId].teacherCode,
       };
       sessions.set(code, session);
       return session;

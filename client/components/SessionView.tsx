@@ -10,7 +10,7 @@ import { RemoteCursors } from "@/components/RemoteCursors";
 import { SessionOutput } from "@/components/SessionOutput";
 import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { TopBar } from "@/components/TopBar";
-import { isPresetId, type PresetId } from "@/lib/problems/presets";
+import { isPresetId, presets, type PresetId } from "@/lib/problems/presets";
 import { useStoredParticipant } from "@/lib/sockets/participant_storage";
 import type { SessionConnection } from "@/lib/sockets/sock";
 
@@ -113,7 +113,9 @@ export function SessionView({ code }: { code: string }) {
         <main className="flex min-w-0 flex-1 gap-3 p-3">
           <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-              <h2 className="font-bold text-fg">Class code</h2>
+              <h2 className="font-bold text-fg">
+                Class code{presetId && <span className="ml-2 text-sm font-normal text-muted">· {presets[presetId].teacherTitle}</span>}
+              </h2>
               <span className="text-xs text-muted">{status}</span>
             </div>
             <div className="min-h-0 flex-1">

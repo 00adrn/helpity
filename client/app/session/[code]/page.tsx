@@ -7,7 +7,7 @@ export default function SessionPage({ params }: { params: Promise<{ code: string
     // params is runtime data, so it is awaited inside the Suspense boundary.
     <Suspense fallback={<p className="p-6">Loading session…</p>}>
       {params.then(({ code }) => (
-        <SessionView code={code.toUpperCase()} />
+        <SessionView key={code.toUpperCase()} code={code.toUpperCase()} />
       ))}
     </Suspense>
   );
