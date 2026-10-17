@@ -1,0 +1,58 @@
+"use client";
+
+import Editor, { type OnMount } from "@monaco-editor/react";
+import { useEffect, useState } from "react";
+
+import { baseEditorOptions } from "@/lib/editor";
+import {
+  connectToSession,
+  type SessionConnection,
+  type SessionParticipant,
+} from "@/lib/sockets/sock";
+
+type SharedEditorProps = {
+  /** Session code; also names the Yjs room. */
+  code: string;
+  participant: SessionParticipant;
+  token: string;
+  /** Called with the live connection once opened, and with undefined when it closes. */
+  onSession?: (session: SessionConnection | undefined) => void;
+};
+
+type MonacoEditor = Parameters<OnMount>[0];
+
+// Stable reference: the Editor re-applies options whenever this object changes,
+// which would undo the read-only state that bindSharedEditor manages.
+// Read-only until the binding says this participant may write.
+const options = { ...baseEditorOptions, readOnly: true };
+
+/** The shared code window, synced live through the session's Yjs room. */
+export function SharedEditor({ code, participant, token, onSession }: SharedEditorProps) {
+  const [editor, setEditor] = useState<MonacoEditor>();
+  const { id, name, color, role } = participant;
+
+  // Connect and bind once Monaco has mounted; close() tears everything down.
+  useEffect(() => {
+    if (!editor) return;
+
+    const session = connectToSession(code, { id, name, color, role }, token);
+    onSession?.(session);
+    session.bindSharedEditor(editor).catch(() => {
+      // The session was closed before Monaco finished loading y-monaco.
+    });
+
+    return () => {
+      onSession?.(undefined);
+      session.close();
+    };
+  }, [editor, code, id, name, color, role, token, onSession]);
+
+  return (
+    <Editor
+      height="80%"
+      language="javascript"
+      onMount={setEditor}
+      options={options}
+    />
+  );
+}

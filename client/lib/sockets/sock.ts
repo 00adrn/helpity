@@ -1,6 +1,6 @@
 import type { OnMount } from "@monaco-editor/react";
 import { HocuspocusProvider } from "@hocuspocus/provider";
-import { MonacoBinding } from "y-monaco";
+import type { MonacoBinding } from "y-monaco";
 import * as Y from "yjs";
 
 type MonacoEditor = Parameters<OnMount>[0];
@@ -32,7 +32,10 @@ export function connectToSession(
   const doc = new Y.Doc();
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const provider = new HocuspocusProvider({
-    url: `${protocol}//${window.location.host}/collab`,
+    // NEXT_PUBLIC_COLLAB_URL points at a standalone dev server (see dev/collab-server.mjs).
+    url:
+      process.env.NEXT_PUBLIC_COLLAB_URL ??
+      `${protocol}//${window.location.host}/collab`,
     name: `session:${code}`,
     document: doc,
     token,
@@ -63,14 +66,20 @@ export function connectToSession(
 
   publishPresence();
 
-  /** Sync a mounted Monaco editor with shared text and return its cleanup function. */
-  function bindSharedEditor(editor: MonacoEditor) {
+  /**
+   * Sync a mounted Monaco editor with shared text and resolve to its cleanup function.
+   * y-monaco is imported lazily because it loads Monaco itself, which needs a browser.
+   */
+  async function bindSharedEditor(editor: MonacoEditor) {
     if (closed) throw new Error("The session connection is closed");
 
     const model = editor.getModel();
     if (!model) throw new Error("The Monaco editor needs a model before binding");
 
-    const binding = new MonacoBinding(
+    const { MonacoBinding } = await import("y-monaco");
+    if (closed) throw new Error("The session connection is closed");
+
+    const binding: MonacoBinding = new MonacoBinding(
       text,
       model,
       new Set([editor]),
@@ -130,3 +139,8 @@ export function connectToSession(
     },
   };
 }
+
+export type SessionConnection = ReturnType<typeof connectToSession>;
+
+/** What each participant publishes to everyone else through awareness. */
+export type ParticipantPresence = SessionParticipant & { raisedHand: boolean };
