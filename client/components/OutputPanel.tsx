@@ -46,25 +46,23 @@ export function OutputPanel({
           <span>
             Output{status && <span className="normal-case"> · {status}</span>}
           </span>
-          {running && onStop && (
-            <button type="button" onClick={onStop} className={`${headerButton} bg-red-600`}>
-              ■ Stop
-            </button>
-          )}
-          {!running && (onRun || onRunTests) && (
-            <div className="flex gap-2">
-              {onRun && (
-                <button type="button" onClick={onRun} className={`${headerButton} bg-accent`}>
-                  ▶ Run
-                </button>
-              )}
-              {onRunTests && (
-                <button type="button" onClick={onRunTests} className={`${headerButton} bg-accent`}>
-                  ✓ Run tests
-                </button>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {running && onStop && (
+              <button type="button" onClick={onStop} className={`${headerButton} bg-red-600`}>
+                ■ Stop
+              </button>
+            )}
+            {!running && onRun && (
+              <button type="button" onClick={onRun} className={`${headerButton} bg-accent`}>
+                ▶ Run
+              </button>
+            )}
+            {!running && onRunTests && (
+              <button type="button" onClick={onRunTests} className={`${headerButton} bg-accent`}>
+                ✓ Run tests
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-3 py-2 font-mono text-sm leading-6">
           {result?.logs.map((line, i) => (
@@ -109,6 +107,16 @@ function testStatusText(result: TestRunResult) {
   if (result.stopped) return "tests stopped";
   if (result.error) return "tests finished with an error";
   return `${result.cases.filter((test) => test.passed).length}/${result.cases.length} tests passed`;
+}
+
+/** The output as plain text, for sending to Helpity. */
+export function outputToText(result: RunResult): string {
+  const lines = result.logs.map((line) => `${line.level}: ${line.text}`);
+  if (result.error) {
+    const where = result.error.line !== undefined ? ` (line ${result.error.line})` : "";
+    lines.push(`Uncaught ${result.error.name}: ${result.error.message}${where}`);
+  }
+  return lines.join("\n");
 }
 
 function statusText(running: boolean, result: RunResult | undefined) {

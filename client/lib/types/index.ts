@@ -22,6 +22,10 @@ export type AssistantRequest = {
   cursor?: { line: number; column: number };
   /** The text the user has highlighted, if any. */
   selection?: string;
+  /** 1-based first and last line of the highlighted text. */
+  selectionLines?: { start: number; end: number };
+  /** Console output of the user's last run (logs and any error), when they want it explained. */
+  output?: string;
   /** Helpity has been asked about Verity and answers in a temper for the rest of the session. */
   angry?: boolean;
 };

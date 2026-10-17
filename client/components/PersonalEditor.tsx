@@ -3,7 +3,7 @@
 import Editor from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 
-import { OutputPanel, TIMEOUT_MS } from "@/components/OutputPanel";
+import { OutputPanel, outputToText, TIMEOUT_MS } from "@/components/OutputPanel";
 import { baseEditorOptions, defineEditorTheme, EDITOR_THEME } from "@/lib/editor";
 import {
   runCode,
@@ -26,9 +26,12 @@ const options = { ...baseEditorOptions };
 export function PersonalEditor({
   onEditor,
   presetId,
+  onExplain,
 }: {
   onEditor?: (editor: MonacoEditor) => void;
   presetId?: PresetId;
+  /** A run ended in an error; Helpity should explain the output. */
+  onExplain?: (output: string) => void;
 }) {
   const [editor, setEditor] = useState<MonacoEditor>();
   const [running, setRunning] = useState(false);
@@ -70,6 +73,8 @@ export function PersonalEditor({
     handle.current = undefined;
     setResult(outcome);
     setRunning(false);
+    // A crash gets explained automatically.
+    if (outcome.error) onExplain?.(outputToText(outcome));
   }
 
   async function test() {
