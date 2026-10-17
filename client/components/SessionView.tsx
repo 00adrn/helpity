@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { Helpity } from "@/components/Helpity";
+import { PersonalEditor } from "@/components/PersonalEditor";
 import { ParticipantsPanel, useParticipants } from "@/components/ParticipantsPanel";
 import { RemoteCursors } from "@/components/RemoteCursors";
 import { SessionOutput } from "@/components/SessionOutput";
@@ -35,8 +36,18 @@ export function SessionView({ code }: { code: string }) {
   const participant = useStoredParticipant(code);
   const [session, setSession] = useState<SessionConnection>();
   const [editor, setEditor] = useState<MonacoEditor>();
+  const [personalEditor, setPersonalEditor] = useState<MonacoEditor>();
+  // Helpity follows whichever code window the user touched last.
+  const [lastFocused, setLastFocused] = useState<MonacoEditor>();
   const participants = useParticipants(session?.awareness);
   const writerId = useWriterId(session?.meta);
+
+  useEffect(() => {
+    const subs = [editor, personalEditor].flatMap((ed) =>
+      ed ? [ed.onDidFocusEditorText(() => setLastFocused(ed))] : [],
+    );
+    return () => subs.forEach((sub) => sub.dispose());
+  }, [editor, personalEditor]);
 
   if (!participant) {
     return (
@@ -50,6 +61,7 @@ export function SessionView({ code }: { code: string }) {
   }
 
   const isTeacher = participant.role === "teacher";
+  const helpityEditor = lastFocused === personalEditor && personalEditor ? personalEditor : editor;
   const me = participants.find((person) => person.id === participant.id);
   const writer = participants.find((person) => person.id === writerId);
   const canWrite = isTeacher || writerId === participant.id;
@@ -76,7 +88,7 @@ export function SessionView({ code }: { code: string }) {
           onGrant={(studentId) => session?.setWriter(studentId)}
           onRevoke={() => session?.setWriter(null)}
         />
-        <main className="flex min-w-0 flex-1 p-3">
+        <main className="flex min-w-0 flex-1 gap-3 p-3">
           <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
               <h2 className="font-bold text-fg">Class code</h2>
@@ -97,10 +109,11 @@ export function SessionView({ code }: { code: string }) {
               getCode={() => editor?.getValue()}
             />
           </section>
+          {!isTeacher && <PersonalEditor onEditor={setPersonalEditor} />}
         </main>
         <RemoteCursors session={session} />
       </div>
-      <Helpity editor={editor} />
+      <Helpity editor={helpityEditor} />
     </div>
   );
 }
