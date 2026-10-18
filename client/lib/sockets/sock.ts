@@ -129,8 +129,8 @@ export function connectToSession(
       raisedHand = value;
       publishPresence();
     },
-    /** Record a test submission for this student: the score, the code, and one more attempt. */
-    submitProgress(result: { passed: number; total: number; code: string }) {
+    /** Record a test submission for this student: the score, the code, each test's result, and one more attempt. */
+    submitProgress(result: Omit<StudentProgress, "name" | "attempts">) {
       if (closed) throw new Error("The session connection is closed");
       const attempts = (progress.get(participant.id)?.attempts ?? 0) + 1;
       progress.set(participant.id, { name: participant.name, ...result, attempts });

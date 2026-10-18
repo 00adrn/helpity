@@ -42,7 +42,7 @@ export function PersonalEditor({
   /** A run ended in an error; Helpity should explain the output. */
   onExplain?: (output: string) => void;
   /** The student ran the tests; this is their submission. */
-  onSubmit?: (submission: { passed: number; total: number; code: string }) => void;
+  onSubmit?: (submission: { passed: number; total: number; code: string; result: TestRunResult }) => void;
   /** The session this editor belongs to, and who is typing; the code is synced live for the teacher. */
   code: string;
   participant: SessionParticipant;
@@ -110,7 +110,7 @@ export function PersonalEditor({
     if (handle.current !== current) return;
     handle.current = undefined;
     if (editor?.getModel()?.getVersionId() === version) setTestResult(outcome);
-    onSubmit?.({ passed: outcome.cases.filter((c) => c.passed).length, total: tests.length, code });
+    onSubmit?.({ passed: outcome.cases.filter((c) => c.passed).length, total: tests.length, code, result: outcome });
     setRunning(false);
   }
 

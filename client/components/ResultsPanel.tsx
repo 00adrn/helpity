@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 
 import { baseEditorOptions, defineEditorTheme, EDITOR_THEME } from "@/lib/editor";
 import type { StudentProgress } from "@/lib/sockets/progress";
+import { OutputPanel } from "@/components/OutputPanel";
 import { PresenceCursors } from "@/components/RemoteCursors";
+import { SplitPane } from "@/components/SplitPane";
 import type { MonacoEditor } from "@/components/SharedEditor";
 import { connectToStudentCode, type StudentCodeConnection } from "@/lib/sockets/personal";
 import type { ParticipantPresence, SessionConnection, SessionParticipant } from "@/lib/sockets/sock";
@@ -119,19 +121,38 @@ export function ResultsPanel({
             ))}
           </div>
         </div>
-        <div className="min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col">
           {mode === "live" ? (
             <LiveCode key={watched.id} code={sessionCode} studentId={watched.id} me={me} />
           ) : submitted === undefined ? (
             <p className="p-4 text-sm text-muted">Nothing to show yet.</p>
           ) : (
-            <Editor
-              height="100%"
-              language="javascript"
-              theme={EDITOR_THEME}
-              beforeMount={defineEditorTheme}
-              value={submitted}
-              options={viewerOptions}
+            // The submitted code, and below it which tests passed or failed (read-only, no Run).
+            <SplitPane
+              direction="vertical"
+              initial={0.6}
+              minA={120}
+              minB={96}
+              className="flex-1"
+              a={
+                <div className="min-h-0 flex-1">
+                  <Editor
+                    height="100%"
+                    language="javascript"
+                    theme={EDITOR_THEME}
+                    beforeMount={defineEditorTheme}
+                    value={submitted}
+                    options={viewerOptions}
+                  />
+                </div>
+              }
+              b={
+                <OutputPanel
+                  running={false}
+                  testResult={watched.progress?.result}
+                  emptyText="Test details weren't saved for this submission."
+                />
+              }
             />
           )}
         </div>
