@@ -10,7 +10,7 @@ type Awareness = SessionConnection["awareness"];
 
 const NOBODY: ParticipantPresence[] = [];
 
-/** Everyone currently connected to the room, teacher first, then by name. */
+/** Everyone currently connected to the room: teacher first, then raised hands, then by name. */
 function readParticipants(awareness: Awareness): ParticipantPresence[] {
   const byId = new Map<string, ParticipantPresence>();
 
@@ -22,6 +22,7 @@ function readParticipants(awareness: Awareness): ParticipantPresence[] {
   return [...byId.values()].sort(
     (a, b) =>
       Number(b.role === "teacher") - Number(a.role === "teacher") ||
+      Number(b.raisedHand) - Number(a.raisedHand) ||
       a.name.localeCompare(b.name),
   );
 }
@@ -139,7 +140,11 @@ export function ParticipantsPanel({
         )}
       </div>
 
-      <ul className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto p-2">
+      {/*
+        On large screens (where the tree shows) the list fades out just above the tree's leaves,
+        and the bottom padding lets the last student scroll up into full view.
+      */}
+      <ul className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto p-2 lg:pb-[190px] lg:[mask-image:linear-gradient(to_bottom,black_calc(100%_-_190px),transparent_calc(100%_-_120px))]">
         {participants.map((person) => {
           const isWriter = person.id === writerId;
           const canGrant = isTeacher && person.role === "student" && !isWriter;
@@ -193,14 +198,30 @@ export function ParticipantsPanel({
         {participants.length === 0 && <li className="px-2 py-1.5 text-sm text-muted">Connecting…</li>}
       </ul>
 
-      <Image
-        src="/sapling.png"
-        alt=""
-        width={240}
-        height={240}
-        // Only on large screens; on md and smaller it crowds the participant list.
-        className="pointer-events-none absolute -bottom-[69px] left-1/2 size-[240px] -translate-x-1/2 max-w-none [image-rendering:pixelated] max-lg:hidden"
-      />
+      {/*
+        The tree, centered and lowered 10px so its grass tucks under the sidebar's bottom edge, with
+        the SwampHacks XII badge in the empty space under its branches on the right.
+      */}
+      <div className="pointer-events-none absolute bottom-0 left-1/2 size-[156px] -translate-x-1/2 translate-y-2.5 max-lg:hidden">
+        <Image
+          src="/tree.png"
+          alt=""
+          // Not on an exact pixel grid, so it's scaled smoothly (the 260px file stays sharp here).
+          width={156}
+          height={156}
+          unoptimized
+          className="max-w-none"
+        />
+        <Image
+          src="/swamphacks.png"
+          alt="SwampHacks XII"
+          // About 1.2px per art pixel (27×27).
+          width={32}
+          height={32}
+          unoptimized
+          className="absolute right-2.5 bottom-3.5 max-w-none [image-rendering:pixelated]"
+        />
+      </div>
     </aside>
   );
 }

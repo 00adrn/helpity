@@ -84,7 +84,15 @@ export function ResultsPanel({
   for (const [id, entry] of Object.entries(progress)) {
     if (!rows.some((row) => row.id === id)) rows.push({ id, name: entry.name, progress: entry });
   }
-  rows.sort((a, b) => a.name.localeCompare(b.name));
+  // Surface who needs help: not done first, most attempts to least; students who passed every
+  // test go to the bottom.
+  const isDone = (row: Row) => !!row.progress && row.progress.total > 0 && row.progress.passed === row.progress.total;
+  rows.sort(
+    (a, b) =>
+      Number(isDone(a)) - Number(isDone(b)) ||
+      (b.progress?.attempts ?? 0) - (a.progress?.attempts ?? 0) ||
+      a.name.localeCompare(b.name),
+  );
 
   const watched = rows.find((row) => row.id === watching);
 
