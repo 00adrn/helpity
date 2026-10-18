@@ -29,6 +29,7 @@ const options = { ...baseEditorOptions };
 export function PersonalEditor({
   onEditor,
   presetId,
+  lessonId,
   onExplain,
   onSubmit,
   code: sessionCode,
@@ -36,6 +37,8 @@ export function PersonalEditor({
 }: {
   onEditor?: (editor: MonacoEditor) => void;
   presetId?: PresetId;
+  /** Which lesson the session is on; a new one replaces this code with its starter. */
+  lessonId?: number;
   /** A run ended in an error; Helpity should explain the output. */
   onExplain?: (output: string) => void;
   /** The student ran the tests; this is their submission. */
@@ -57,19 +60,16 @@ export function PersonalEditor({
   // Sync this editor through the student's own Yjs room so the teacher can watch and see the cursor.
   const { id, name, color, role, avatar } = participant;
   useEffect(() => {
-    if (!editor || !presetId) return;
+    if (!editor || !presetId || lessonId === undefined) return;
     const connection = connectToStudentCode(sessionCode, id, { id, name, color, role, avatar }, "dev-token");
     connection.synced.then(() => {
-      // First visit: seed the room with the starter. On a reload the saved code is loaded instead.
-      if (connection.text.length === 0 && presets[presetId].studentCode) {
-        connection.text.insert(0, presets[presetId].studentCode);
-      }
+      connection.seedForLesson(lessonId, presets[presetId].studentCode);
       return connection.bindEditor(editor);
     });
     return () => {
       connection.close();
     };
-  }, [editor, presetId, sessionCode, id, name, color, role, avatar]);
+  }, [editor, presetId, lessonId, sessionCode, id, name, color, role, avatar]);
 
   useEffect(() => {
     if (!editor) return;

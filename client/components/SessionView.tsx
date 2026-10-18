@@ -1,12 +1,15 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { PencilIcon } from "@/components/Icons";
 import { Helpity, type HelpityNotice } from "@/components/Helpity";
+import { LessonCountdown } from "@/components/LessonCountdown";
 import { PersonalEditor } from "@/components/PersonalEditor";
+import { ProblemPicker } from "@/components/ProblemPicker";
 import { ParticipantsPanel, useParticipants } from "@/components/ParticipantsPanel";
 import { RemoteCursors } from "@/components/RemoteCursors";
 import { SplitPane, useMinWidth } from "@/components/SplitPane";
@@ -14,9 +17,11 @@ import { ResultsPanel } from "@/components/ResultsPanel";
 import { SessionOutput } from "@/components/SessionOutput";
 import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { TopBar } from "@/components/TopBar";
+import { button } from "@/components/button";
 import { isPresetId, presets, type PresetId } from "@/lib/problems/presets";
+import { fade } from "@/lib/motion";
 import { forgetParticipant, useStoredParticipant } from "@/lib/sockets/participant_storage";
-import type { SessionConnection } from "@/lib/sockets/sock";
+import { lessonIdOf, type SessionConnection } from "@/lib/sockets/sock";
 
 /** The student currently allowed to type, from the session's shared meta map. */
 function useWriterId(meta: SessionConnection["meta"] | undefined): string | null {
@@ -74,6 +79,24 @@ function useSessionEnded(meta: SessionConnection["meta"] | undefined): boolean {
   return ended || latched;
 }
 
+/**
+ * Which lesson the session is on (see lessonIdOf), or undefined until the room has loaded.
+ * Every room is seeded with a presetId, so its arrival means the shared state is in.
+ */
+function useLessonId(meta: SessionConnection["meta"] | undefined): number | undefined {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!meta) return () => {};
+      meta.observe(onChange);
+      return () => meta.unobserve(onChange);
+    },
+    [meta],
+  );
+  const read = () => (meta && isPresetId(meta.get("presetId")) ? lessonIdOf(meta) : undefined);
+
+  return useSyncExternalStore(subscribe, read, () => undefined);
+}
+
 /** The live session screen: navbar, participants sidebar, and the class code window. */
 export function SessionView({ code }: { code: string }) {
   const participant = useStoredParticipant(code);
@@ -96,6 +119,20 @@ export function SessionView({ code }: { code: string }) {
   const [sidebarWidth, setSidebarWidth] = useState(240);
 
   // Tell a student when the teacher gives them a turn in the class code, and when it ends.
+  // Switching lessons: the teacher picks a new one; students get a countdown when it changes.
+  const lessonId = useLessonId(session?.meta);
+  const [choosingLesson, setChoosingLesson] = useState(false);
+  const [countdownFor, setCountdownFor] = useState<number>();
+  const [seenLessonId, setSeenLessonId] = useState(lessonId);
+  if (lessonId !== seenLessonId) {
+    setSeenLessonId(lessonId);
+    // Only a change while here counts; joining mid-lesson is not a switch.
+    if (seenLessonId !== undefined && lessonId !== undefined && participant?.role === "student") {
+      setCountdownFor(lessonId);
+    }
+  }
+  const endCountdown = useCallback(() => setCountdownFor(undefined), []);
+
   const [seenWriterId, setSeenWriterId] = useState(writerId);
   if (writerId !== seenWriterId) {
     setSeenWriterId(writerId);
@@ -207,6 +244,7 @@ export function SessionView({ code }: { code: string }) {
         raisedHand={me?.raisedHand ?? false}
         onToggleHand={session && (() => session.setRaisedHand(!me?.raisedHand))}
         onExit={session && exit}
+        onSwitchLesson={session && (() => setChoosingLesson(true))}
       />
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <ParticipantsPanel
@@ -240,6 +278,7 @@ export function SessionView({ code }: { code: string }) {
                 <PersonalEditor
                   onEditor={setPersonalEditor}
                   presetId={presetId}
+                  lessonId={lessonId}
                   onSubmit={(submission) => session?.submitProgress(submission)}
                   code={code}
                   participant={participant}
@@ -256,6 +295,31 @@ export function SessionView({ code }: { code: string }) {
       </div>
       {/* Helpity is for students; teachers don't get it. */}
       {!isTeacher && <Helpity editor={helpityEditor} explain={explain} notice={notice} />}
+
+      {/* The teacher's lesson select screen, over the session so everyone stays connected. */}
+      <AnimatePresence>
+        {isTeacher && choosingLesson && session && (
+          <motion.div {...fade} className="fixed inset-0 z-[90] flex flex-col bg-bg">
+            <ProblemPicker
+              actionLabel="Switch lesson"
+              // Same education level as the current lesson; a blank file has none.
+              initialLevel={presetId && presetId !== "blank" ? presets[presetId].level : null}
+              onCreate={(next) => {
+                session.switchLesson(next);
+                setChoosingLesson(false);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setChoosingLesson(false)}
+              className={`${button.secondary} absolute top-4 left-4`}
+            >
+              <span className="font-glyph">←</span> Back to class
+            </button>
+          </motion.div>
+        )}
+        {countdownFor !== undefined && <LessonCountdown key={countdownFor} onDone={endCountdown} />}
+      </AnimatePresence>
     </div>
   );
 }

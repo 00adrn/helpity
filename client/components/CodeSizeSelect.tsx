@@ -1,8 +1,10 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { CODE_SIZES, setCodeSize, useCodeSize } from "@/lib/editor/codeSize";
+import { pop } from "@/lib/motion";
 
 /** The Figma navbar "Select": a small square button with a menu for the code text size. */
 export function CodeSizeSelect() {
@@ -44,32 +46,38 @@ export function CodeSizeSelect() {
         Aa
       </button>
 
-      {open && (
-        <div className="absolute top-full right-0 mt-2 flex w-[184px] flex-col gap-1 rounded-lg border border-border bg-surface px-3 py-2 shadow-sm">
-          <p className="text-xs leading-4 font-semibold text-muted">How big is the code?</p>
-          <ul id={listId} role="listbox" aria-label="Code size" className="flex flex-col gap-1">
-            {CODE_SIZES.map((option) => {
-              const selected = option.value === size;
-              return (
-                <li key={option.value} role="option" aria-selected={selected}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCodeSize(option.value);
-                      setOpen(false);
-                    }}
-                    className={`h-7 w-full rounded-md px-2 py-1 text-left text-sm leading-5 font-semibold transition focus-visible:outline-2 focus-visible:outline-accent ${
-                      selected ? "bg-accent text-on-accent" : "text-fg hover:bg-surface-sunken"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            {...pop}
+            style={{ transformOrigin: "top right" }}
+            className="absolute top-full right-0 mt-2 flex w-[184px] flex-col gap-1 rounded-lg border border-border bg-surface px-3 py-2 shadow-sm"
+          >
+            <p className="text-xs leading-4 font-semibold text-muted">How big is the code?</p>
+            <ul id={listId} role="listbox" aria-label="Code size" className="flex flex-col gap-1">
+              {CODE_SIZES.map((option) => {
+                const selected = option.value === size;
+                return (
+                  <li key={option.value} role="option" aria-selected={selected}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCodeSize(option.value);
+                        setOpen(false);
+                      }}
+                      className={`h-7 w-full rounded-md px-2 py-1 text-left text-sm leading-5 font-semibold transition focus-visible:outline-2 focus-visible:outline-accent ${
+                        selected ? "bg-accent text-on-accent" : "text-fg hover:bg-surface-sunken"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

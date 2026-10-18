@@ -22,6 +22,8 @@ type ProblemPickerProps = {
   error?: string;
   /** The button's label; the teacher flow says "Next" because naming comes after. */
   actionLabel?: string;
+  /** Start on this level, e.g. the current lesson's when switching lessons. */
+  initialLevel?: PresetLevel | null;
 };
 
 /** "Select a problem type": pick an education level, then swipe through its problems. */
@@ -30,8 +32,9 @@ export function ProblemPicker({
   busy = false,
   error,
   actionLabel = "Create session",
+  initialLevel = null,
 }: ProblemPickerProps) {
-  const [level, setLevel] = useState<PresetLevel | null>(null);
+  const [level, setLevel] = useState<PresetLevel | null>(initialLevel);
   // No problems until a level is picked, then just that level's.
   const problems = useMemo(
     () =>

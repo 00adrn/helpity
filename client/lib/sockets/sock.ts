@@ -1,3 +1,4 @@
+import { presets, type PresetId } from "@/lib/problems/presets";
 import type { StudentProgress } from "@/lib/sockets/progress";
 import type { OnMount } from "@monaco-editor/react";
 import { HocuspocusProvider } from "@hocuspocus/provider";
@@ -146,6 +147,24 @@ export function connectToSession(
       meta.set("writerId", writerId);
     },
     /**
+     * Start a new lesson for everyone: the class code becomes the new example, and the old run
+     * output, practice results and write access are cleared. `lessonId` counts up so students
+     * notice the switch (countdown) and reset their own code, even for the same problem again.
+     */
+    switchLesson(presetId: PresetId) {
+      if (closed) throw new Error("The session connection is closed");
+      if (participant.role !== "teacher") throw new Error("Only the teacher can switch lessons");
+      doc.transact(() => {
+        text.delete(0, text.length);
+        text.insert(0, presets[presetId].teacherCode);
+        meta.set("presetId", presetId);
+        meta.set("lessonId", lessonIdOf(meta) + 1);
+        meta.set("writerId", null);
+        run.clear();
+        progress.clear();
+      });
+    },
+    /**
      * Mark the session as over; every student's screen switches to "session ended".
      * Resolves once the server has the change (or after 3s), so it's safe to close afterwards.
      */
@@ -180,6 +199,12 @@ export function connectToSession(
 }
 
 export type SessionConnection = ReturnType<typeof connectToSession>;
+
+/** Which lesson the session is on: 0 for the one it started with, then +1 per switch. */
+export function lessonIdOf(meta: SessionConnection["meta"]): number {
+  const value = meta.get("lessonId");
+  return typeof value === "number" ? value : 0;
+}
 
 /** What each participant publishes to everyone else through awareness. */
 export type ParticipantPresence = SessionParticipant & { raisedHand: boolean };

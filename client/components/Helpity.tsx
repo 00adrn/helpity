@@ -1,6 +1,7 @@
 "use client";
 
 import type { editor as MonacoNs } from "monaco-editor";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { button } from "@/components/button";
@@ -13,6 +14,7 @@ import {
   type Sprite,
 } from "@/lib/ai/emotion";
 import { useCursorFollower } from "@/lib/ai/useCursorFollower";
+import { pop } from "@/lib/motion";
 
 const SIZE = 56;
 const FLAP_MS = 130;
@@ -377,73 +379,76 @@ export function Helpity({
         </span>
       </button>
 
-      {bubble && (
-        // data-side / data-vert are set by useCursorFollower so the bubble flips near edges.
-        <section
-          aria-live="polite"
-          className="pointer-events-auto absolute top-full left-0 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-surface text-fg shadow-sm group-data-[side=left]:right-0 group-data-[side=left]:left-auto group-data-[vert=up]:top-auto group-data-[vert=up]:bottom-full group-data-[vert=up]:mt-0 group-data-[vert=up]:mb-2"
-        >
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={reset}
-            className="absolute top-2 right-2 rounded px-1 text-base leading-none text-muted transition hover:bg-surface-sunken hover:text-fg"
+      <AnimatePresence>
+        {bubble && (
+          // data-side / data-vert are set by useCursorFollower so the bubble flips near edges.
+          <motion.section
+            {...pop}
+            aria-live="polite"
+            className="pointer-events-auto absolute top-full left-0 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-surface text-fg shadow-sm group-data-[side=left]:right-0 group-data-[side=left]:left-auto group-data-[vert=up]:top-auto group-data-[vert=up]:bottom-full group-data-[vert=up]:mt-0 group-data-[vert=up]:mb-2"
           >
-            ×
-          </button>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={reset}
+              className="absolute top-2 right-2 rounded px-1 text-base leading-none text-muted transition hover:bg-surface-sunken hover:text-fg"
+            >
+              ×
+            </button>
 
-          {/* Right padding keeps the text clear of the × */}
-          <div className="py-2.5 pr-8 pl-3 text-sm leading-5">
-            {bubble.kind === "hint" && (
-              <p className="text-muted">{bubble.text}</p>
-            )}
-            {bubble.kind === "thinking" && (
-              <p className="text-muted">Hmm, let me look at that…</p>
-            )}
-            {bubble.kind === "answer" && (
-              <p
-                className={`max-h-48 overflow-y-auto whitespace-pre-wrap ${bubble.failed ? "text-red-700" : ""}`}
-              >
-                {bubble.text}
-              </p>
-            )}
-          </div>
-
-          {/* Follow-ups only after a real answer. */}
-          {bubble.kind === "answer" && !bubble.failed && (
-            <footer className="border-t border-border px-3 py-2">
-              {askingMore ? (
-                <form onSubmit={submitFollowUp} className="flex gap-2">
-                  <input
-                    autoFocus
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="Ask about your code…"
-                    maxLength={4000}
-                    className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg placeholder:text-muted/70 focus:outline-2 focus:outline-accent"
-                  />
-                  <button
-                    type="submit"
-                    disabled={busy || !question.trim()}
-                    className={button.primary}
-                  >
-                    Ask
-                  </button>
-                </form>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setAskingMore(true)}
-                  disabled={busy}
-                  className="text-sm font-semibold text-accent transition hover:underline disabled:opacity-50"
-                >
-                  Ask another question?
-                </button>
+            {/* Right padding keeps the text clear of the × */}
+            <div className="py-2.5 pr-8 pl-3 text-sm leading-5">
+              {bubble.kind === "hint" && (
+                <p className="text-muted">{bubble.text}</p>
               )}
-            </footer>
-          )}
-        </section>
-      )}
+              {bubble.kind === "thinking" && (
+                <p className="text-muted">Hmm, let me look at that…</p>
+              )}
+              {bubble.kind === "answer" && (
+                <p
+                  className={`max-h-48 overflow-y-auto whitespace-pre-wrap ${bubble.failed ? "text-red-700" : ""}`}
+                >
+                  {bubble.text}
+                </p>
+              )}
+            </div>
+
+            {/* Follow-ups only after a real answer. */}
+            {bubble.kind === "answer" && !bubble.failed && (
+              <footer className="border-t border-border px-3 py-2">
+                {askingMore ? (
+                  <form onSubmit={submitFollowUp} className="flex gap-2">
+                    <input
+                      autoFocus
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      placeholder="Ask about your code…"
+                      maxLength={4000}
+                      className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg placeholder:text-muted/70 focus:outline-2 focus:outline-accent"
+                    />
+                    <button
+                      type="submit"
+                      disabled={busy || !question.trim()}
+                      className={button.primary}
+                    >
+                      Ask
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAskingMore(true)}
+                    disabled={busy}
+                    className="text-sm font-semibold text-accent transition hover:underline disabled:opacity-50"
+                  >
+                    Ask another question?
+                  </button>
+                )}
+              </footer>
+            )}
+          </motion.section>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

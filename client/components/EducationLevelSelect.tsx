@@ -1,8 +1,10 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { pop } from "@/lib/motion";
 import type { PresetLevel } from "@/lib/problems/presets";
 
 export const LEVELS: { value: PresetLevel; label: string }[] = [
@@ -62,32 +64,38 @@ export function EducationLevelSelect({ value, onChange, className = "" }: Educat
         />
       </button>
 
-      {open && (
-        <div className="absolute top-full right-0 left-0 mt-1.5 flex flex-col gap-1.5 rounded-xl border border-border bg-surface px-5 py-3 shadow-sm">
-          <p className="text-[19px] leading-[26px] font-semibold text-muted">Education level</p>
-          <ul id={listId} role="listbox" aria-label="Education level" className="flex flex-col gap-1.5">
-            {LEVELS.map((level) => {
-              const selected = level.value === value;
-              return (
-                <li key={level.value} role="option" aria-selected={selected}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange(level.value);
-                      setOpen(false);
-                    }}
-                    className={`w-full rounded-lg px-3 py-1.5 text-left text-[22px] leading-8 font-semibold transition focus-visible:outline-2 focus-visible:outline-accent ${
-                      selected ? "bg-accent text-on-accent" : "text-fg hover:bg-surface-sunken"
-                    }`}
-                  >
-                    {level.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            {...pop}
+            style={{ transformOrigin: "top center" }}
+            className="absolute top-full right-0 left-0 mt-1.5 flex flex-col gap-1.5 rounded-xl border border-border bg-surface px-5 py-3 shadow-sm"
+          >
+            <p className="text-[19px] leading-[26px] font-semibold text-muted">Education level</p>
+            <ul id={listId} role="listbox" aria-label="Education level" className="flex flex-col gap-1.5">
+              {LEVELS.map((level) => {
+                const selected = level.value === value;
+                return (
+                  <li key={level.value} role="option" aria-selected={selected}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange(level.value);
+                        setOpen(false);
+                      }}
+                      className={`w-full rounded-lg px-3 py-1.5 text-left text-[22px] leading-8 font-semibold transition focus-visible:outline-2 focus-visible:outline-accent ${
+                        selected ? "bg-accent text-on-accent" : "text-fg hover:bg-surface-sunken"
+                      }`}
+                    >
+                      {level.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

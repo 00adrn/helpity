@@ -55,6 +55,8 @@ export function connectToStudentCode(
   }
 
   const text = doc.getText("content");
+  /** Holds `lessonId`: which lesson this code was started for (see seedForLesson). */
+  const meta = doc.getMap<unknown>("meta");
   let binding: MonacoBinding | undefined;
   let closed = false;
 
@@ -68,6 +70,18 @@ export function connectToStudentCode(
     text,
     awareness,
     synced,
+    /**
+     * Make sure the room holds code for this lesson: on the first visit, or after the teacher
+     * switched lessons, it is replaced with the starter. On a reload the student's code is kept.
+     */
+    seedForLesson(lessonId: number, starter: string) {
+      if (meta.get("lessonId") === lessonId && text.length > 0) return;
+      doc.transact(() => {
+        text.delete(0, text.length);
+        text.insert(0, starter);
+        meta.set("lessonId", lessonId);
+      });
+    },
     /** Sync a mounted editor with this student's code, and show/publish cursors. */
     async bindEditor(editor: MonacoEditor) {
       await synced;

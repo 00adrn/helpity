@@ -1,8 +1,10 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import { button } from "@/components/button";
+import { fade, pop } from "@/lib/motion";
 
 type ExitDialogProps = {
   open: boolean;
@@ -29,7 +31,11 @@ const COPY = {
   },
 } as const;
 
-/** "Are you sure?" before ending or leaving a session. A native modal, so Escape and focus just work. */
+/**
+ * "Are you sure?" before ending or leaving a session, opened from End/Leave session or the
+ * wordmark. A native modal (so Escape and focus just work) whose backdrop and panel animate
+ * with the app's motion presets; it only really closes once the exit animation has played.
+ */
 export function ExitDialog({ open, isTeacher, onClose, onConfirm }: ExitDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false);
@@ -37,9 +43,7 @@ export function ExitDialog({ open, isTeacher, onClose, onConfirm }: ExitDialogPr
 
   useEffect(() => {
     const node = dialog.current;
-    if (!node) return;
-    if (open && !node.open) node.showModal();
-    if (!open && node.open) node.close();
+    if (open && node && !node.open) node.showModal();
   }, [open]);
 
   async function confirm() {
@@ -50,26 +54,41 @@ export function ExitDialog({ open, isTeacher, onClose, onConfirm }: ExitDialogPr
   return (
     <dialog
       ref={dialog}
-      onClose={onClose}
-      // Clicking the dimmed backdrop (the dialog element itself) closes it.
-      onClick={(event) => event.target === event.currentTarget && onClose()}
+      // Escape: animate out instead of the browser closing it at once.
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       aria-labelledby="exit-title"
-      className="m-auto w-[min(360px,calc(100vw-32px))] rounded-xl border border-border bg-surface p-0 text-fg shadow-sm backdrop:bg-fg/30"
+      className="m-0 h-full max-h-none w-full max-w-none bg-transparent p-4 backdrop:bg-transparent open:grid open:place-items-center"
     >
-      <div className="flex flex-col gap-2 px-5 pt-5 pb-4">
-        <h2 id="exit-title" className="text-xl font-bold">
-          {copy.title}
-        </h2>
-        <p className="text-sm text-muted">{copy.body}</p>
-      </div>
-      <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-        <button type="button" autoFocus onClick={onClose} disabled={busy} className={button.secondary}>
-          {copy.stay}
-        </button>
-        <button type="button" onClick={confirm} disabled={busy} className={button.danger}>
-          {busy ? copy.busy : copy.confirm}
-        </button>
-      </div>
+      <AnimatePresence onExitComplete={() => dialog.current?.close()}>
+        {open && (
+          <>
+            <motion.div key="backdrop" {...fade} onClick={onClose} className="fixed inset-0 bg-fg/30" />
+            <motion.div
+              key="panel"
+              {...pop}
+              className="relative w-[min(360px,100%)] rounded-xl border border-border bg-surface text-fg shadow-sm"
+            >
+              <div className="flex flex-col gap-2 px-5 pt-5 pb-4">
+                <h2 id="exit-title" className="text-xl font-bold">
+                  {copy.title}
+                </h2>
+                <p className="text-sm text-muted">{copy.body}</p>
+              </div>
+              <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
+                <button type="button" autoFocus onClick={onClose} disabled={busy} className={button.secondary}>
+                  {copy.stay}
+                </button>
+                <button type="button" onClick={confirm} disabled={busy} className={button.danger}>
+                  {busy ? copy.busy : copy.confirm}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </dialog>
   );
 }
