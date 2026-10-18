@@ -198,7 +198,8 @@ export function ParticipantsPanel({
         alt=""
         width={240}
         height={240}
-        className="pointer-events-none absolute -bottom-[69px] left-1/2 size-[240px] -translate-x-1/2 max-w-none [image-rendering:pixelated]"
+        // Only on large screens; on md and smaller it crowds the participant list.
+        className="pointer-events-none absolute -bottom-[69px] left-1/2 size-[240px] -translate-x-1/2 max-w-none [image-rendering:pixelated] max-lg:hidden"
       />
     </aside>
   );

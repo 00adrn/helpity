@@ -82,7 +82,7 @@ export function JoinFlow({ initialCode = "" }: { initialCode?: string }) {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Captain Code"
+            placeholder="Name"
             maxLength={30}
             autoComplete="off"
             // A shared link already has the code, so start on the nickname.
