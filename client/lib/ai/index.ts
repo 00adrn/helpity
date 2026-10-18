@@ -24,6 +24,10 @@ function logDebug(clientMs: number, status: number, debug: AssistantDebug | unde
   const { geminiMs, routeMs, usage } = debug;
   const notes: string[] = [];
   if (debug.error) notes.push(`Failed: ${debug.error}.`);
+  if (debug.answeredBy) {
+    const why = debug.failedAttempts?.map((f) => `${f.model}: ${f.error}`).join("; ");
+    notes.push(`Fell back to ${debug.answeredBy} because ${why}.`);
+  }
   if ((usage?.thoughtsTokens ?? 0) > 0) {
     notes.push(
       `The model used ${usage?.thoughtsTokens} hidden "thinking" tokens. Lower its thinking level to cut latency.`,
