@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { FreshOnNavigate } from "@/components/FreshOnNavigate";
 import { HelpityLogo } from "@/components/HelpityLogo";
 
 // three.js needs WebGL, so the bouncing ball only loads in the browser.
@@ -12,6 +13,14 @@ const BouncingHelpity = dynamic(() => import("@/components/BouncingHelpity"), { 
 
 /** The landing page: enter a join code (goes to the lobby at /join/CODE), or start a session at /teach. */
 export default function Home() {
+  return (
+    <FreshOnNavigate>
+      <Landing />
+    </FreshOnNavigate>
+  );
+}
+
+function Landing() {
   const router = useRouter();
   const [joinCode, setJoinCode] = useState("");
 

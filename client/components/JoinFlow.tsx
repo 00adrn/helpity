@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { AvatarId } from "@/components/Avatar";
 import { AvatarPicker } from "@/components/AvatarPicker";
 import { button } from "@/components/button";
+import { useResetBusyOnReturn } from "@/components/FreshOnNavigate";
 import { HelpityLogo } from "@/components/HelpityLogo";
 import { saveParticipant } from "@/lib/sockets/participant_storage";
 import type { SessionParticipant } from "@/lib/sockets/sock";
@@ -23,6 +24,8 @@ export function JoinFlow({ initialCode = "" }: { initialCode?: string }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  // Browser back from the session restores this page; don't come back stuck on "Joining…".
+  useResetBusyOnReturn(setBusy);
 
   /** Check the code before asking the student to choose an avatar. */
   async function checkJoinCode(event: React.FormEvent) {
@@ -50,7 +53,9 @@ export function JoinFlow({ initialCode = "" }: { initialCode?: string }) {
   function joinWithAvatar({ code, participant }: Joined, avatar: AvatarId) {
     setBusy(true);
     saveParticipant(code, { ...participant, avatar });
-    router.push(`/session/${code}`);
+    // A full page load, so the session always starts fresh (see app/session/[code]/page.tsx).
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate
+    window.location.assign(`/session/${code}`);
   }
 
   if (joined) {

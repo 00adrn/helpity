@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { randomAvatar } from "@/components/Avatar";
 import { button } from "@/components/button";
+import { FreshOnNavigate, useResetBusyOnReturn } from "@/components/FreshOnNavigate";
 import { HelpityLogo } from "@/components/HelpityLogo";
 import { ProblemPicker } from "@/components/ProblemPicker";
 import type { PresetId } from "@/lib/problems/presets";
@@ -12,12 +12,21 @@ import { saveParticipant } from "@/lib/sockets/participant_storage";
 
 /** Teacher setup: choose a problem, then enter a name, then create the session and enter it. */
 export default function TeachPage() {
-  const router = useRouter();
+  return (
+    <FreshOnNavigate>
+      <TeachSetup />
+    </FreshOnNavigate>
+  );
+}
+
+function TeachSetup() {
   // Set once a problem is chosen; the name step shows while it is.
   const [presetId, setPresetId] = useState<PresetId>();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  // Browser back from the session restores this page; don't come back stuck on "Starting…".
+  useResetBusyOnReturn(setBusy);
 
   async function createSession(event: FormEvent) {
     event.preventDefault();
@@ -47,7 +56,9 @@ export default function TeachPage() {
         role: "teacher",
         avatar: randomAvatar(),
       });
-      router.push(`/session/${code}`);
+      // A full page load, so the session always starts fresh (see app/session/[code]/page.tsx).
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate
+      window.location.assign(`/session/${code}`);
     } catch {
       setError("Could not start a session");
       setBusy(false);

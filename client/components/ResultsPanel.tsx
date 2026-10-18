@@ -172,11 +172,21 @@ export function ResultsPanel({
     <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <h2 className="border-b border-border px-4 py-2.5 text-lg font-bold text-fg">Student practice results</h2>
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="grid min-w-[420px] grid-cols-[minmax(0,1.2fr)_minmax(0,1.6fr)_auto_auto] items-center gap-x-4 border-b border-border px-4 py-2 text-xs font-semibold tracking-[0.3px] text-muted uppercase">
+        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.6fr)_auto_auto] items-center gap-x-3 md:min-w-[420px] md:gap-x-4 border-b border-border px-4 py-2 text-xs font-semibold tracking-[0.3px] text-muted uppercase">
           <span>Student</span>
-          <span>Tests passed</span>
-          <span className="w-16 text-center">Attempts</span>
-          <span className="w-16 text-right whitespace-nowrap">View code</span>
+          {/* Phones get short headings so all four columns fit without scrolling sideways. */}
+          <span>
+            <span className="md:hidden">Passed</span>
+            <span className="max-md:hidden">Tests passed</span>
+          </span>
+          <span className="w-10 text-center md:w-16">
+            <span className="md:hidden">Tries</span>
+            <span className="max-md:hidden">Attempts</span>
+          </span>
+          <span className="w-10 text-right whitespace-nowrap md:w-16">
+            <span className="md:hidden">Code</span>
+            <span className="max-md:hidden">View code</span>
+          </span>
         </div>
         {rows.map((row) => {
           const entry = row.progress;
@@ -184,7 +194,7 @@ export function ResultsPanel({
           return (
             <div
               key={row.id}
-              className="grid min-w-[420px] grid-cols-[minmax(0,1.2fr)_minmax(0,1.6fr)_auto_auto] items-center gap-x-4 border-b border-border px-4 py-3 text-fg"
+              className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.6fr)_auto_auto] items-center gap-x-3 md:min-w-[420px] md:gap-x-4 border-b border-border px-4 py-3 text-fg"
             >
               <span className="truncate">{row.name}</span>
               {entry ? (
@@ -202,14 +212,14 @@ export function ResultsPanel({
               ) : (
                 <span className="text-muted">not submitted</span>
               )}
-              <span className="w-16 text-center tabular-nums">{entry?.attempts ?? 0}</span>
-              <span className="flex w-16 justify-end">
+              <span className="w-10 text-center tabular-nums md:w-16">{entry?.attempts ?? 0}</span>
+              <span className="flex w-10 justify-end md:w-16">
                 <button
                   type="button"
                   aria-label={`View ${row.name}'s code`}
                   title={`View ${row.name}'s code`}
                   onClick={() => setWatching(row.id)}
-                  className="flex size-8 items-center justify-center rounded-full bg-accent text-on-accent transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  className="flex size-10 items-center justify-center rounded-full bg-accent md:size-8 text-on-accent transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <span className="font-glyph">→</span>
                 </button>

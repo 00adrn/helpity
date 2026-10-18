@@ -81,3 +81,39 @@ export function CodeSizeSelect() {
     </div>
   );
 }
+
+/** The same choice as a segmented control, for the phone's Options sheet. */
+export function CodeSizeSegments() {
+  const size = useCodeSize();
+
+  return (
+    <div>
+      <p id="code-size-label" className="mb-2 text-sm font-semibold text-muted">
+        How big is the code?
+      </p>
+      <div
+        role="radiogroup"
+        aria-labelledby="code-size-label"
+        className="grid grid-cols-3 gap-1 rounded-xl bg-surface-sunken p-1"
+      >
+        {CODE_SIZES.map((option) => {
+          const selected = option.value === size;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => setCodeSize(option.value)}
+              className={`h-11 rounded-lg text-base font-semibold transition focus-visible:outline-2 focus-visible:outline-accent ${
+                selected ? "bg-accent text-on-accent shadow-sm" : "text-fg"
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

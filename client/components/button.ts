@@ -1,7 +1,8 @@
 // Tailwind classes for the Figma "Button" component's variants.
-// Every variant has a 1px border so swapping variants (e.g. Raise/Lower hand) never changes size.
+// Every variant has a 1px border so swapping variants (e.g. Raise/Lower hand) never changes size,
+// and labels never wrap, so a button stays one line tall.
 const base =
-  "rounded-lg border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50";
+  "rounded-lg border px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50";
 
 export const button = {
   primary: `${base} border-transparent bg-accent text-on-accent shadow-sm hover:brightness-110`,

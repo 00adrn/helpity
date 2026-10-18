@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Quicksand } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -24,6 +24,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Helpity",
   description: "A live coding classroom for kids, with a little helper named Helpity.",
+};
+
+// Phones: draw under the notch/home-indicator areas (padded with env(safe-area-inset-*) where it
+// matters), and shrink the layout above the on-screen keyboard so the code stays visible.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

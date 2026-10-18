@@ -66,6 +66,8 @@ type ParticipantsPanelProps = {
   /** Sidebar width in px on wide screens; undefined on narrow ones, where it becomes a top strip. */
   width?: number;
   onResize?(width: number): void;
+  /** "sheet": just the list, for the phone's participants sheet (it has its own title). */
+  variant?: "sidebar" | "sheet";
 };
 
 const MIN_WIDTH = 176;
@@ -119,8 +121,76 @@ export function ParticipantsPanel({
   onRevoke,
   width,
   onResize,
+  variant = "sidebar",
 }: ParticipantsPanelProps) {
   const students = participants.filter((person) => person.role === "student").length;
+
+  // The rows, shared by the sidebar and the phone sheet.
+  const items = (
+    <>
+    {participants.map((person) => {
+      const isWriter = person.id === writerId;
+      const canGrant = isTeacher && person.role === "student" && !isWriter;
+      const suffix = `${person.id === selfId ? " (you)" : ""}${person.role === "teacher" ? " · teacher" : ""}`;
+      const row = (
+        <>
+          <Avatar id={person.avatar} size={32} color={person.color} />
+          <span className="min-w-0 flex-1 truncate">
+            <span className="text-fg">{person.name}</span>
+            {suffix && <span className="text-muted">{suffix}</span>}
+          </span>
+          {person.raisedHand && (
+            <span role="img" aria-label="Hand raised" title="Hand raised">
+              ✋
+            </span>
+          )}
+        </>
+      );
+      const rowClass = `flex h-14 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${
+        isWriter ? "bg-accent-subtle" : ""
+      }`;
+
+      return (
+        <li key={person.id}>
+          {canGrant ? (
+            <button
+              type="button"
+              onClick={() => onGrant(person.id)}
+              title={`Let ${person.name} type in the class code`}
+              className={`${rowClass} cursor-pointer transition hover:bg-accent-subtle/50 focus-visible:outline-2 focus-visible:outline-accent`}
+            >
+              {row}
+            </button>
+          ) : (
+            <div className={rowClass}>
+              {row}
+              {isWriter && isTeacher && (
+                <button
+                  type="button"
+                  onClick={onRevoke}
+                  className="shrink-0 rounded bg-red-50 px-1.5 text-xs leading-[18px] font-semibold text-red-600 transition hover:bg-red-100"
+                >
+                  Revoke writing
+                </button>
+              )}
+            </div>
+          )}
+        </li>
+      );
+    })}
+    {participants.length === 0 && <li className="px-2 py-1.5 text-sm text-muted">Connecting…</li>}
+    </>
+  );
+
+  if (variant === "sheet") {
+    return (
+      <div className="flex flex-col pb-3">
+        {isTeacher && <p className="px-5 pb-1 text-sm text-muted">Tap a student to let them type.</p>}
+        <ul className="flex flex-col p-2">{items}</ul>
+      </div>
+    );
+  }
+
 
   return (
     <aside
@@ -145,57 +215,7 @@ export function ParticipantsPanel({
         and the bottom padding lets the last student scroll up into full view.
       */}
       <ul className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto p-2 lg:pb-[190px] lg:[mask-image:linear-gradient(to_bottom,black_calc(100%_-_190px),transparent_calc(100%_-_120px))]">
-        {participants.map((person) => {
-          const isWriter = person.id === writerId;
-          const canGrant = isTeacher && person.role === "student" && !isWriter;
-          const suffix = `${person.id === selfId ? " (you)" : ""}${person.role === "teacher" ? " · teacher" : ""}`;
-          const row = (
-            <>
-              <Avatar id={person.avatar} size={32} color={person.color} />
-              <span className="min-w-0 flex-1 truncate">
-                <span className="text-fg">{person.name}</span>
-                {suffix && <span className="text-muted">{suffix}</span>}
-              </span>
-              {person.raisedHand && (
-                <span role="img" aria-label="Hand raised" title="Hand raised">
-                  ✋
-                </span>
-              )}
-            </>
-          );
-          const rowClass = `flex h-14 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${
-            isWriter ? "bg-accent-subtle" : ""
-          }`;
-
-          return (
-            <li key={person.id}>
-              {canGrant ? (
-                <button
-                  type="button"
-                  onClick={() => onGrant(person.id)}
-                  title={`Let ${person.name} type in the class code`}
-                  className={`${rowClass} cursor-pointer transition hover:bg-accent-subtle/50 focus-visible:outline-2 focus-visible:outline-accent`}
-                >
-                  {row}
-                </button>
-              ) : (
-                <div className={rowClass}>
-                  {row}
-                  {isWriter && isTeacher && (
-                    <button
-                      type="button"
-                      onClick={onRevoke}
-                      className="shrink-0 rounded bg-red-50 px-1.5 text-xs leading-[18px] font-semibold text-red-600 transition hover:bg-red-100"
-                    >
-                      Revoke writing
-                    </button>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
-        {participants.length === 0 && <li className="px-2 py-1.5 text-sm text-muted">Connecting…</li>}
+        {items}
       </ul>
 
       {/*

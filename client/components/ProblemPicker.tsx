@@ -58,7 +58,7 @@ export function ProblemPicker({
       {...carousel.stageProps}
       className="relative flex flex-1 touch-pan-y flex-col items-center overflow-hidden overscroll-x-none bg-bg px-4 pt-[min(128px,20vh)] select-none [--item-w:min(640px,64vw)] [--step:min(560px,48vw)]"
     >
-      <h1 className="text-4xl leading-none font-bold tracking-[-0.9px] text-fg">
+      <h1 className="text-center text-4xl leading-none font-bold tracking-[-0.9px] text-fg">
         Select a problem type
       </h1>
 

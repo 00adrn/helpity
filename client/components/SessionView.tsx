@@ -2,12 +2,12 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-import { PencilIcon } from "@/components/Icons";
+import { PencilIcon, PresentationIcon, UsersIcon } from "@/components/Icons";
 import { Helpity, type HelpityNotice } from "@/components/Helpity";
 import { LessonCountdown } from "@/components/LessonCountdown";
+import { MobileTabs } from "@/components/MobileTabs";
 import { PersonalEditor } from "@/components/PersonalEditor";
 import { ProblemPicker } from "@/components/ProblemPicker";
 import { ParticipantsPanel, useParticipants } from "@/components/ParticipantsPanel";
@@ -16,6 +16,7 @@ import { SplitPane, useMinWidth } from "@/components/SplitPane";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import { SessionOutput } from "@/components/SessionOutput";
 import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
+import { Sheet } from "@/components/Sheet";
 import { TopBar } from "@/components/TopBar";
 import { button } from "@/components/button";
 import { isPresetId, presets, type PresetId } from "@/lib/problems/presets";
@@ -114,8 +115,10 @@ export function SessionView({ code }: { code: string }) {
   const writerId = useWriterId(session?.meta);
   const presetId = usePresetId(session?.meta);
   const ended = useSessionEnded(session?.meta);
-  const router = useRouter();
   const wide = useMinWidth(768);
+  // Phones: which code window fills the screen, and whether the participants sheet is open.
+  const [tab, setTab] = useState<"class" | "side">("class");
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(240);
 
   // Tell a student when the teacher gives them a turn in the class code, and when it ends.
@@ -137,14 +140,19 @@ export function SessionView({ code }: { code: string }) {
   if (writerId !== seenWriterId) {
     setSeenWriterId(writerId);
     if (participant?.role === "student") {
-      if (writerId === participant.id) say("canWrite");
+      if (writerId === participant.id) {
+        say("canWrite");
+        setTab("class"); // on a phone, jump to the code they can now type in
+      }
       else if (seenWriterId === participant.id) say("turnOver");
     }
   }
 
   // Typing in the teacher's code: Helpity explains instead of Monaco's "Cannot edit" tooltip.
   useEffect(() => {
-    if (!editor) return;
+    // No model means Monaco already threw this editor away (React can mount it twice in
+    // development); touching a disposed editor's parts throws.
+    if (!editor?.getModel()) return;
     editor.getContribution("editor.contrib.readOnlyMessageController")?.dispose();
     const sub = editor.onDidAttemptReadOnlyEdit(() => say("readOnly"));
     return () => sub.dispose();
@@ -174,21 +182,32 @@ export function SessionView({ code }: { code: string }) {
   async function exit() {
     if (isTeacher) await session?.endSession();
     forgetParticipant(code);
-    router.replace("/");
+    // A full page load: leaving resets the whole site, so the next join or session starts clean.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate
+    window.location.assign("/");
   }
 
   if (ended && !isTeacher) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-2 bg-bg p-6 text-center">
         <p className="text-lg font-semibold text-fg">Your teacher ended this session.</p>
-        <Link href="/" onClick={() => forgetParticipant(code)} className="font-semibold text-accent underline">
+        {/* A full page load, so the next session starts with a clean site. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- deliberate */}
+        <a href="/" onClick={() => forgetParticipant(code)} className="font-semibold text-accent underline">
           Back to Helpity
-        </Link>
+        </a>
       </main>
     );
   }
 
-  const helpityEditor = lastFocused === personalEditor && personalEditor ? personalEditor : editor;
+  // On a phone only one window shows, so Helpity follows that one.
+  const helpityEditor = wide
+    ? lastFocused === personalEditor && personalEditor
+      ? personalEditor
+      : editor
+    : tab === "side" && personalEditor
+      ? personalEditor
+      : editor;
   const me = participants.find((person) => person.id === participant.id);
   const writer = participants.find((person) => person.id === writerId);
   // The teacher can always type, so they only need to know when a student is typing too.
@@ -236,8 +255,29 @@ export function SessionView({ code }: { code: string }) {
     </section>
   );
 
+  // The second window: the teacher's results, or the student's own code.
+  const sidePane = isTeacher ? (
+    <ResultsPanel session={session} participants={participants} code={code} me={participant} />
+  ) : (
+    <PersonalEditor
+      onEditor={setPersonalEditor}
+      presetId={presetId}
+      lessonId={lessonId}
+      onSubmit={(submission) => session?.submitProgress(submission)}
+      code={code}
+      participant={participant}
+      onExplain={(output) => {
+        setLastFocused(personalEditor);
+        setExplain((prev) => ({ output, id: (prev?.id ?? 0) + 1 }));
+      }}
+    />
+  );
+  const students = participants.filter((person) => person.role === "student").length;
+  const hands = participants.filter((person) => person.role === "student" && person.raisedHand).length;
+
   return (
-    <div className="flex h-dvh flex-col bg-bg">
+    // overscroll-none: no rubber-band bounce or pull-to-refresh while coding on a phone.
+    <div className="flex h-dvh flex-col overscroll-none bg-bg">
       <TopBar
         code={code}
         isTeacher={isTeacher}
@@ -245,54 +285,66 @@ export function SessionView({ code }: { code: string }) {
         onToggleHand={session && (() => session.setRaisedHand(!me?.raisedHand))}
         onExit={session && exit}
         onSwitchLesson={session && (() => setChoosingLesson(true))}
+        people={wide ? undefined : { students, hands, onOpen: () => setPeopleOpen(true) }}
       />
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <ParticipantsPanel
-          participants={participants}
-          selfId={participant.id}
-          isTeacher={isTeacher}
-          writerId={writerId}
-          onGrant={(studentId) => session?.setWriter(studentId)}
-          onRevoke={() => session?.setWriter(null)}
-          width={wide ? sidebarWidth : undefined}
-          onResize={setSidebarWidth}
-        />
-        <main className="flex min-h-0 min-w-0 flex-1 p-3">
-          {isTeacher ? (
-            <SplitPane
-              direction={wide ? "horizontal" : "vertical"}
-              minA={wide ? 240 : 160}
-              minB={wide ? 240 : 160}
-              className="flex-1"
-              a={classCode}
-              b={<ResultsPanel session={session} participants={participants} code={code} me={participant} />}
+      {wide ? (
+        <div className="flex min-h-0 flex-1 flex-row">
+          <ParticipantsPanel
+            participants={participants}
+            selfId={participant.id}
+            isTeacher={isTeacher}
+            writerId={writerId}
+            onGrant={(studentId) => session?.setWriter(studentId)}
+            onRevoke={() => session?.setWriter(null)}
+            width={sidebarWidth}
+            onResize={setSidebarWidth}
+          />
+          <main className="flex min-h-0 min-w-0 flex-1 p-3">
+            <SplitPane direction="horizontal" minA={240} minB={240} className="flex-1" a={classCode} b={sidePane} />
+          </main>
+          <RemoteCursors session={session} />
+        </div>
+      ) : (
+        <>
+          <MobileTabs<"class" | "side">
+            active={tab}
+            onChange={setTab}
+            tabs={[
+              {
+                id: "class",
+                label: isTeacher ? "Class code" : "Teacher's code",
+                icon: <PresentationIcon />,
+                content: classCode,
+              },
+              {
+                id: "side",
+                label: isTeacher ? "Students" : "Try it yourself!",
+                icon: isTeacher ? <UsersIcon /> : <PencilIcon />,
+                content: sidePane,
+              },
+            ]}
+          />
+          <RemoteCursors session={session} />
+          <Sheet
+            open={peopleOpen}
+            onClose={() => setPeopleOpen(false)}
+            title={`${isTeacher ? "Participants" : "Here now"} (${students} ${students === 1 ? "student" : "students"})`}
+          >
+            <ParticipantsPanel
+              variant="sheet"
+              participants={participants}
+              selfId={participant.id}
+              isTeacher={isTeacher}
+              writerId={writerId}
+              onGrant={(studentId) => {
+                session?.setWriter(studentId);
+                setPeopleOpen(false);
+              }}
+              onRevoke={() => session?.setWriter(null)}
             />
-          ) : (
-            <SplitPane
-              direction={wide ? "horizontal" : "vertical"}
-              minA={wide ? 240 : 160}
-              minB={wide ? 240 : 160}
-              className="flex-1"
-              a={classCode}
-              b={
-                <PersonalEditor
-                  onEditor={setPersonalEditor}
-                  presetId={presetId}
-                  lessonId={lessonId}
-                  onSubmit={(submission) => session?.submitProgress(submission)}
-                  code={code}
-                  participant={participant}
-                  onExplain={(output) => {
-                    setLastFocused(personalEditor);
-                    setExplain((prev) => ({ output, id: (prev?.id ?? 0) + 1 }));
-                  }}
-                />
-              }
-            />
-          )}
-        </main>
-        <RemoteCursors session={session} />
-      </div>
+          </Sheet>
+        </>
+      )}
       {/* Helpity is for students; teachers don't get it. */}
       {!isTeacher && <Helpity editor={helpityEditor} explain={explain} notice={notice} />}
 

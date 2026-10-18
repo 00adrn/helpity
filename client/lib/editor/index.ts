@@ -33,26 +33,47 @@ export const baseEditorOptions: EditorProps["options"] = {
 export const EDITOR_THEME = "helpity";
 
 // Monaco is one global instance shared by every editor, so this runs once.
-let codeSizeWired = false;
+let wired = false;
 
 /**
- * Apply the user's code size (see codeSize.ts) to every editor, now and whenever it changes.
- * This goes through Monaco rather than the `options` prop, because SharedEditor needs its
- * options object to never change (changing it would reset read-only).
+ * Settings that apply to every editor and every document, set up once through Monaco:
+ * - Line endings are always "\n". Monaco otherwise uses the computer's own ending ("\r\n" on
+ *   Windows), and the live sync turns positions into character offsets, so a Windows user and a
+ *   Mac user would count each line break differently and see cursors and edits drift apart.
+ * - The user's code size (see codeSize.ts), now and whenever it changes. This goes through Monaco
+ *   rather than the `options` prop, because SharedEditor needs its options object to never change
+ *   (changing it would reset read-only).
  */
-function wireCodeSize(monaco: Parameters<BeforeMount>[0]) {
-  if (codeSizeWired) return;
-  codeSizeWired = true;
+function wireEditors(monaco: Parameters<BeforeMount>[0]) {
+  if (wired) return;
+  wired = true;
+  // Every document, as soon as it exists (before any live sync binds to it). Pasted "\r\n" text
+  // is converted to the document's "\n" too.
+  monaco.editor.getModels().forEach((model) => model.setEOL(monaco.editor.EndOfLineSequence.LF));
+  monaco.editor.onDidCreateModel((model) => model.setEOL(monaco.editor.EndOfLineSequence.LF));
+
   const apply = (editor: { updateOptions(options: object): void }) =>
     editor.updateOptions(codeSizeOptions(getCodeSize()));
-  // Wait a tick so the editor's own options are in place first.
-  monaco.editor.onDidCreateEditor((editor) => queueMicrotask(() => apply(editor)));
+  monaco.editor.onDidCreateEditor((editor) => {
+    // An editor can be thrown away right after it's made (e.g. when a page resets), and touching
+    // a disposed one throws, so remember if that happened.
+    let disposed = false;
+    editor.onDidDispose(() => (disposed = true));
+    // Wait a tick so the editor's own options are in place first.
+    queueMicrotask(() => {
+      if (disposed) return;
+      apply(editor);
+      // Drop the floating keyboard button Monaco adds on touch screens; tapping the code
+      // already opens the keyboard, so it's just clutter in the corner.
+      if ("getContribution" in editor) editor.getContribution("editor.contrib.iPadShowKeyboard")?.dispose();
+    });
+  });
   subscribeCodeSize(() => monaco.editor.getEditors().forEach(apply));
 }
 
 /** Register the Helpity editor colors (Figma "editor/*" tokens) before Monaco mounts. */
 export const defineEditorTheme: BeforeMount = (monaco) => {
-  wireCodeSize(monaco);
+  wireEditors(monaco);
   monaco.editor.defineTheme(EDITOR_THEME, {
     base: "vs",
     inherit: true,
