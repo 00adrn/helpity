@@ -37,6 +37,9 @@ export type AssistantDebug = {
   /** The model we asked for, and the exact version Google says answered. */
   model: string;
   modelVersion?: string;
+  /** Set only when the main model failed and the fallback answered (or every model failed). */
+  answeredBy?: string;
+  failedAttempts?: { model: string; error: string }[];
   /** Time spent waiting on `generateContent`, in ms. Undefined if the call never started. */
   geminiMs?: number;
   /** Time the whole route took, in ms. */

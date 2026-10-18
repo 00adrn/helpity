@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
+import { AllModelsFailedError, withModelFallback } from "@/lib/ai/fallback";
 import { checkRateLimit, readRateLimitConfig } from "@/lib/ai/rateLimit";
 import {
   ANSWER_EMOTIONS,
@@ -10,6 +11,12 @@ import {
 
 /** Used when GEMINI_MODEL isn't set. */
 const DEFAULT_MODEL = "gemini-3.1-flash-lite";
+
+/** Used when GEMINI_FALLBACK_MODEL isn't set. A different model has its own quota and capacity. */
+const DEFAULT_FALLBACK_MODEL = "gemini-2.5-flash-lite";
+
+/** Give up on one model after this long, so a hung call falls through to the fallback model. */
+const MODEL_TIMEOUT_MS = 10_000;
 
 const SYSTEM_INSTRUCTION = `You are Helpity, a friendly yellow smiley face who helps kids learn to code.
 You float next to the code they are writing.
@@ -133,6 +140,7 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || DEFAULT_FALLBACK_MODEL;
 
   if (!apiKey) {
     return Response.json({ error: "AI assistant is not configured" }, { status: 503 });
@@ -170,34 +178,61 @@ export async function POST(request: Request) {
   try {
     const ai = new GoogleGenAI({ apiKey });
 
-    // Health check: a real (tiny) Gemini call proves the key and connection work, and the reply
-    // is built here from what the API reports, so the model name is always exact.
+    // Health check: a real (tiny) Gemini call to each model proves the key and connection work,
+    // and the reply is built here from what the API reports, so the model names are always exact.
     if (input.question.trim() === HEALTH_CHECK_QUESTION) {
       const geminiStart = Date.now();
-      const ping = await ai.models.generateContent({ model, contents: "Reply with OK." });
+      const names = [...new Set([model, fallbackModel])];
+      const pings = await Promise.allSettled(
+        names.map((name) =>
+          ai.models.generateContent({
+            model: name,
+            contents: "Reply with OK.",
+            config: { abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS) },
+          }),
+        ),
+      );
       debug.geminiMs = Date.now() - geminiStart;
-      debug.modelVersion = ping.modelVersion;
+      const report = pings.map((ping, i) =>
+        ping.status === "fulfilled"
+          ? `${ping.value.modelVersion ?? names[i]} is working`
+          : `${names[i]} FAILED`,
+      );
+      if (pings[0].status === "fulfilled") debug.modelVersion = pings[0].value.modelVersion;
       const answer: AssistantResponse = {
-        answer: `${ping.modelVersion ?? model} is working. SwampHacks XII submission by BNF.`,
-        emotion: "happy",
+        answer: `${report.join(". ")}. SwampHacks XII submission by BNF.`,
+        emotion: pings.every((p) => p.status === "fulfilled") ? "happy" : "thinking",
       };
       return Response.json(withDebug(answer));
     }
 
     const geminiStart = Date.now();
-    const result = await ai.models.generateContent({
-      model,
-      contents: context,
-      config: {
-        systemInstruction: input.angry ? SYSTEM_INSTRUCTION + ANGRY_INSTRUCTION : SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseJsonSchema: RESPONSE_SCHEMA,
+    const { value, model: answeredBy, failed } = await withModelFallback(
+      [model, fallbackModel],
+      async (name) => {
+        const result = await ai.models.generateContent({
+          model: name,
+          contents: context,
+          config: {
+            systemInstruction: input.angry ? SYSTEM_INSTRUCTION + ANGRY_INSTRUCTION : SYSTEM_INSTRUCTION,
+            responseMimeType: "application/json",
+            responseJsonSchema: RESPONSE_SCHEMA,
+            abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
+          },
+        });
+        const parsed = result.text ? parseModelAnswer(result.text) : undefined;
+        return parsed && { parsed, result };
       },
-    });
+    );
 
+    const { parsed, result } = value;
     debug.geminiMs = Date.now() - geminiStart;
     debug.modelVersion = result.modelVersion;
     debug.finishReason = result.candidates?.[0]?.finishReason;
+    if (failed.length > 0) {
+      debug.answeredBy = answeredBy;
+      debug.failedAttempts = failed;
+    }
     const usage = result.usageMetadata;
     debug.usage = {
       promptTokens: usage?.promptTokenCount,
@@ -206,15 +241,10 @@ export async function POST(request: Request) {
       totalTokens: usage?.totalTokenCount,
     };
 
-    const parsed = result.text ? parseModelAnswer(result.text) : undefined;
-    if (!parsed) {
-      debug.error = "returned no usable answer";
-      return Response.json(withDebug({ error: "AI assistant returned no usable answer" }), { status: 502 });
-    }
-
     return Response.json(withDebug(parsed));
   } catch (error) {
     debug.error = error instanceof Error ? error.message : String(error);
+    if (error instanceof AllModelsFailedError) debug.failedAttempts = error.failed;
     return Response.json(withDebug({ error: "AI assistant request failed" }), { status: 502 });
   }
 }
