@@ -30,6 +30,30 @@ export type AssistantRequest = {
   angry?: boolean;
 };
 
+/** Timing and token details for one Gemini call, so slow answers can be diagnosed from the browser console. */
+export type AssistantDebug = {
+  /** Which request since the server started; the first in `next dev` also compiles the route. */
+  callNumber: number;
+  /** The model we asked for, and the exact version Google says answered. */
+  model: string;
+  modelVersion?: string;
+  /** Time spent waiting on `generateContent`, in ms. Undefined if the call never started. */
+  geminiMs?: number;
+  /** Time the whole route took, in ms. */
+  routeMs: number;
+  promptChars: number;
+  /** From Gemini's usageMetadata. `thoughtsTokens` are hidden "thinking" tokens that add latency. */
+  usage?: {
+    promptTokens?: number;
+    answerTokens?: number;
+    thoughtsTokens?: number;
+    totalTokens?: number;
+  };
+  finishReason?: string;
+  /** Set when the call failed or returned nothing usable. */
+  error?: string;
+};
+
 export type AssistantResponse = {
   answer: string;
   emotion: Emotion;

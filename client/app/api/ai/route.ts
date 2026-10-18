@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { checkRateLimit, readRateLimitConfig } from "@/lib/ai/rateLimit";
 import {
   ANSWER_EMOTIONS,
+  type AssistantDebug,
   type AssistantRequest,
   type AssistantResponse,
 } from "@/lib/types";
@@ -110,7 +111,12 @@ function clientKey(request: Request): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
 }
 
+/** Counts requests since the server started, for the debug info. */
+let callCount = 0;
+
 export async function POST(request: Request) {
+  const routeStart = Date.now();
+  const callNumber = ++callCount;
   let input: unknown;
 
   try {
@@ -152,20 +158,31 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n\n");
 
+  const debug: AssistantDebug = { callNumber, model, routeMs: 0, promptChars: context.length };
+  /** Fill in the route time last, so every response (even failures) carries it. */
+  const withDebug = <T extends object>(body: T) => {
+    debug.routeMs = Date.now() - routeStart;
+    return { ...body, debug };
+  };
+
   try {
     const ai = new GoogleGenAI({ apiKey });
 
     // Health check: a real (tiny) Gemini call proves the key and connection work, and the reply
     // is built here from what the API reports, so the model name is always exact.
     if (input.question.trim() === HEALTH_CHECK_QUESTION) {
+      const geminiStart = Date.now();
       const ping = await ai.models.generateContent({ model, contents: "Reply with OK." });
+      debug.geminiMs = Date.now() - geminiStart;
+      debug.modelVersion = ping.modelVersion;
       const answer: AssistantResponse = {
         answer: `${ping.modelVersion ?? model} is working. SwampHacks XII submission by BNF.`,
         emotion: "happy",
       };
-      return Response.json(answer);
+      return Response.json(withDebug(answer));
     }
 
+    const geminiStart = Date.now();
     const result = await ai.models.generateContent({
       model,
       contents: context,
@@ -176,13 +193,26 @@ export async function POST(request: Request) {
       },
     });
 
+    debug.geminiMs = Date.now() - geminiStart;
+    debug.modelVersion = result.modelVersion;
+    debug.finishReason = result.candidates?.[0]?.finishReason;
+    const usage = result.usageMetadata;
+    debug.usage = {
+      promptTokens: usage?.promptTokenCount,
+      answerTokens: usage?.candidatesTokenCount,
+      thoughtsTokens: usage?.thoughtsTokenCount,
+      totalTokens: usage?.totalTokenCount,
+    };
+
     const parsed = result.text ? parseModelAnswer(result.text) : undefined;
     if (!parsed) {
-      return Response.json({ error: "AI assistant returned no usable answer" }, { status: 502 });
+      debug.error = "returned no usable answer";
+      return Response.json(withDebug({ error: "AI assistant returned no usable answer" }), { status: 502 });
     }
 
-    return Response.json(parsed);
-  } catch {
-    return Response.json({ error: "AI assistant request failed" }, { status: 502 });
+    return Response.json(withDebug(parsed));
+  } catch (error) {
+    debug.error = error instanceof Error ? error.message : String(error);
+    return Response.json(withDebug({ error: "AI assistant request failed" }), { status: 502 });
   }
 }
