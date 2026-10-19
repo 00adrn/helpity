@@ -21,9 +21,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const description = "A fun, collaborative, and AI-enabled K-12 coding classroom";
+
+// Link previews (Discord, iMessage, Slack...) need absolute URLs, so the preview image resolves
+// against the live domain. The image itself is app/opengraph-image.tsx.
 export const metadata: Metadata = {
+  metadataBase: new URL("https://helpity.app"),
   title: "Helpity",
-  description: "A live coding classroom for kids, with a little helper named Helpity.",
+  description,
+  openGraph: {
+    title: "Helpity",
+    description,
+    url: "/",
+    siteName: "Helpity",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Helpity",
+    description,
+  },
 };
 
 // Phones: draw under the notch/home-indicator areas (padded with env(safe-area-inset-*) where it
