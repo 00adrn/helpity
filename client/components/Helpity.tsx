@@ -14,6 +14,7 @@ import {
   type Sprite,
 } from "@/lib/ai/emotion";
 import { useCursorFollower } from "@/lib/ai/useCursorFollower";
+import type { HelpityLevel } from "@/lib/ai/levels";
 import { pop } from "@/lib/motion";
 
 const SIZE = 56;
@@ -107,12 +108,15 @@ export function Helpity({
   editor,
   explain,
   notice,
+  level,
 }: {
   editor: MonacoEditor | undefined;
   /** Console output to explain; each new `id` asks again. */
   explain?: { output: string; id: number };
   /** Something to say right away; each new `id` says it again. */
   notice?: HelpityNotice;
+  /** Who Helpity talks to, chosen by the teacher. */
+  level?: HelpityLevel;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { emotion, angry, enrage, calm, set, flash } = useAssistantMood();
@@ -173,6 +177,7 @@ export function Helpity({
           question: text,
           ...readEditorContext(editor),
           output,
+          level,
           // No code goes along with a Verity question, so there is nothing to give feedback on.
           ...(isAngry && {
             angry: true,

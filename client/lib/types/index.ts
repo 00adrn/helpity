@@ -1,3 +1,5 @@
+import type { HelpityLevel } from "../ai/levels";
+
 export type CodeFile = {
   id: string;
   name: string;
@@ -28,6 +30,8 @@ export type AssistantRequest = {
   output?: string;
   /** Helpity has been asked about Verity and answers in a temper for the rest of the session. */
   angry?: boolean;
+  /** Who Helpity is talking to, set by the teacher (see lib/ai/levels.ts). Defaults to elementary. */
+  level?: HelpityLevel;
 };
 
 /** Timing and token details for one Gemini call, so slow answers can be diagnosed from the browser console. */

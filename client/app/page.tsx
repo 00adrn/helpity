@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { FreshOnNavigate } from "@/components/FreshOnNavigate";
 import { HelpityLogo } from "@/components/HelpityLogo";
+import { JOIN_CODE_LENGTH, joinCodeFrom, pasteJoinCode } from "@/lib/sessions/joinCode";
 
 // three.js needs WebGL, so the bouncing ball only loads in the browser.
 const BouncingHelpity = dynamic(() => import("@/components/BouncingHelpity"), { ssr: false });
@@ -45,10 +46,11 @@ function Landing() {
         >
           <input
             value={joinCode}
-            onChange={(event) => setJoinCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+            onChange={(event) => setJoinCode(joinCodeFrom(event.target.value))}
+            onPaste={pasteJoinCode(setJoinCode)}
+            maxLength={JOIN_CODE_LENGTH}
             aria-label="Join code"
             placeholder="Join code"
-            maxLength={6}
             autoComplete="off"
             spellCheck={false}
             autoFocus

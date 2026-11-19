@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 
+import type { HelpityLevel } from "@/lib/ai/levels";
 import { presets, type PresetId } from "@/lib/problems/presets";
 
 // THIS FILE IS THE SESSION DATA STORE FOR OUR APPLICATION
@@ -10,6 +11,8 @@ export type Session = {
   code: string;
   createdAt: number;
   presetId: PresetId;
+  /** Who Helpity talks to when the session starts; the teacher can change it later in the session. */
+  helpityLevel: HelpityLevel;
   initialText: string;
   documentState?: Uint8Array;
   /** Each student's private code window, keyed by participant id. */
@@ -35,7 +38,7 @@ export function createRoomCode(): string {
 };
 
 /** Make a new session with an unused code, remember it, and return it. */
-export function createSession(presetId: PresetId): Session {
+export function createSession(presetId: PresetId, helpityLevel: HelpityLevel): Session {
   while (true) {
     const code = createRoomCode();
     if (!sessions.has(code)) {
@@ -43,6 +46,7 @@ export function createSession(presetId: PresetId): Session {
         code,
         createdAt: Date.now(),
         presetId,
+        helpityLevel,
         initialText: presets[presetId].teacherCode,
       };
       sessions.set(code, session);

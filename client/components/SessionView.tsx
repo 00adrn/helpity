@@ -19,6 +19,7 @@ import { SharedEditor, type MonacoEditor } from "@/components/SharedEditor";
 import { Sheet } from "@/components/Sheet";
 import { TopBar } from "@/components/TopBar";
 import { button } from "@/components/button";
+import { DEFAULT_HELPITY_LEVEL, isHelpityLevel, type HelpityLevel } from "@/lib/ai/levels";
 import { isPresetId, presets, type PresetId } from "@/lib/problems/presets";
 import { fade } from "@/lib/motion";
 import { forgetParticipant, useStoredParticipant } from "@/lib/sockets/participant_storage";
@@ -80,6 +81,24 @@ function useSessionEnded(meta: SessionConnection["meta"] | undefined): boolean {
   return ended || latched;
 }
 
+/** Who Helpity talks to, from the session's shared meta map (set by the teacher). */
+function useHelpityLevel(meta: SessionConnection["meta"] | undefined): HelpityLevel {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!meta) return () => {};
+      meta.observe(onChange);
+      return () => meta.unobserve(onChange);
+    },
+    [meta],
+  );
+  const read = () => {
+    const value = meta?.get("helpityLevel");
+    return isHelpityLevel(value) ? value : DEFAULT_HELPITY_LEVEL;
+  };
+
+  return useSyncExternalStore(subscribe, read, () => DEFAULT_HELPITY_LEVEL);
+}
+
 /**
  * Which lesson the session is on (see lessonIdOf), or undefined until the room has loaded.
  * Every room is seeded with a presetId, so its arrival means the shared state is in.
@@ -124,6 +143,7 @@ export function SessionView({ code }: { code: string }) {
   // Tell a student when the teacher gives them a turn in the class code, and when it ends.
   // Switching lessons: the teacher picks a new one; students get a countdown when it changes.
   const lessonId = useLessonId(session?.meta);
+  const helpityLevel = useHelpityLevel(session?.meta);
   const [choosingLesson, setChoosingLesson] = useState(false);
   const [countdownFor, setCountdownFor] = useState<number>();
   const [seenLessonId, setSeenLessonId] = useState(lessonId);
@@ -257,7 +277,12 @@ export function SessionView({ code }: { code: string }) {
 
   // The second window: the teacher's results, or the student's own code.
   const sidePane = isTeacher ? (
-    <ResultsPanel session={session} participants={participants} code={code} me={participant} />
+    <ResultsPanel
+      session={session}
+      participants={participants}
+      code={code}
+      me={participant}
+    />
   ) : (
     <PersonalEditor
       onEditor={setPersonalEditor}
@@ -285,6 +310,14 @@ export function SessionView({ code }: { code: string }) {
         onToggleHand={session && (() => session.setRaisedHand(!me?.raisedHand))}
         onExit={session && exit}
         onSwitchLesson={session && (() => setChoosingLesson(true))}
+        kidCopy={
+          !isTeacher && !!presetId && (presets[presetId].level === "elementary" || presets[presetId].level === "middle")
+        }
+        helpity={
+          isTeacher
+            ? { level: helpityLevel, disabled: !session, onChange: (level) => session?.setHelpityLevel(level) }
+            : undefined
+        }
         people={wide ? undefined : { students, hands, onOpen: () => setPeopleOpen(true) }}
       />
       {wide ? (
@@ -346,7 +379,7 @@ export function SessionView({ code }: { code: string }) {
         </>
       )}
       {/* Helpity is for students; teachers don't get it. */}
-      {!isTeacher && <Helpity editor={helpityEditor} explain={explain} notice={notice} />}
+      {!isTeacher && <Helpity editor={helpityEditor} explain={explain} notice={notice} level={helpityLevel} />}
 
       {/* The teacher's lesson select screen, over the session so everyone stays connected. */}
       <AnimatePresence>

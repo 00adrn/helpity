@@ -1,7 +1,8 @@
+import { DEFAULT_HELPITY_LEVEL, isHelpityLevel } from "@/lib/ai/levels";
 import { isPresetId } from "@/lib/problems/presets";
 import { createSession } from "@/lib/sessions/data_store";
 
-/** Validate the selected problem pair, start a session, and return its join code. */
+/** Validate the selected problem pair and Helpity level, start a session, and return its join code. */
 export async function POST(request: Request) {
   let input: unknown;
 
@@ -20,6 +21,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "Choose a valid problem" }, { status: 400 });
   }
 
-  const session = createSession(presetId);
+  const helpityLevel =
+    typeof input === "object" && input !== null && "helpityLevel" in input
+      ? input.helpityLevel
+      : DEFAULT_HELPITY_LEVEL;
+  if (!isHelpityLevel(helpityLevel)) {
+    return Response.json({ error: "Choose a valid Helpity level" }, { status: 400 });
+  }
+
+  const session = createSession(presetId, helpityLevel);
   return Response.json({ code: session.code, presetId: session.presetId });
 }

@@ -9,6 +9,7 @@ import { button } from "@/components/button";
 import { useResetBusyOnReturn } from "@/components/FreshOnNavigate";
 import { HelpityLogo } from "@/components/HelpityLogo";
 import { saveParticipant } from "@/lib/sockets/participant_storage";
+import { JOIN_CODE_LENGTH, joinCodeFrom, pasteJoinCode } from "@/lib/sessions/joinCode";
 import type { SessionParticipant } from "@/lib/sockets/sock";
 
 type Joined = { code: string; participant: SessionParticipant };
@@ -20,7 +21,7 @@ type Joined = { code: string; participant: SessionParticipant };
 export function JoinFlow({ initialCode = "" }: { initialCode?: string }) {
   const router = useRouter();
   const [joined, setJoined] = useState<Joined>();
-  const [joinCode, setJoinCode] = useState(initialCode.toUpperCase());
+  const [joinCode, setJoinCode] = useState(joinCodeFrom(initialCode));
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -74,7 +75,9 @@ export function JoinFlow({ initialCode = "" }: { initialCode?: string }) {
           <span className="text-sm font-semibold text-muted">Join code</span>
           <input
             value={joinCode}
-            onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+            onChange={(event) => setJoinCode(joinCodeFrom(event.target.value))}
+            onPaste={pasteJoinCode(setJoinCode)}
+            maxLength={JOIN_CODE_LENGTH}
             placeholder="ABC123"
             autoComplete="off"
             spellCheck={false}

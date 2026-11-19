@@ -4,8 +4,19 @@ import { useSyncExternalStore } from "react";
 export const CODE_SIZES = [
   { value: 14, label: "Small" },
   { value: 16, label: "Medium" },
-  { value: 20, label: "Big" },
+  { value: 20, label: "Large" },
 ] as const;
+
+/**
+ * The size menu's wording. Kids (students on an Elementary or Middle School problem) get the
+ * friendly version; teachers and older students get the plain one.
+ */
+export function codeSizeCopy(kid: boolean) {
+  return {
+    heading: kid ? "How big is the code?" : "Code editor font size",
+    label: (value: CodeSize, label: string) => (kid && value === 20 ? "Big" : label),
+  };
+}
 
 export type CodeSize = (typeof CODE_SIZES)[number]["value"];
 

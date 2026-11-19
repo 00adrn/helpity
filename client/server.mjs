@@ -57,6 +57,7 @@ const hocuspocus = new Hocuspocus({
     } else {
       document.getText("content").insert(0, session.initialText);
       document.getMap("meta").set("presetId", session.presetId);
+      document.getMap("meta").set("helpityLevel", session.helpityLevel);
     }
     return document;
   },

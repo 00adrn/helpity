@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { button } from "@/components/button";
-import { CodeSizeSegments, CodeSizeSelect } from "@/components/CodeSizeSelect";
+import { CodeSizeSegments, CodeSizeSelect, type HelpitySetting } from "@/components/CodeSizeSelect";
+import { HelpityLevelPicker } from "@/components/HelpityLevelPicker";
 import { ExitDialog } from "@/components/ExitDialog";
 import { CheckIcon, CopyIcon, MoreIcon, UsersIcon } from "@/components/Icons";
 import { HelpityLogo } from "@/components/HelpityLogo";
@@ -21,6 +22,10 @@ type TopBarProps = {
   onExit?: () => void | Promise<void>;
   /** Teacher only: open the lesson select screen. Undefined until connected. */
   onSwitchLesson?: () => void;
+  /** Friendly kid wording in the code size menu (students on Elementary or Middle School problems). */
+  kidCopy?: boolean;
+  /** Teacher only: how Helpity talks to students, set from the code size menu. */
+  helpity?: HelpitySetting;
   /** Phones only: who's here, for the button that opens the participants sheet. */
   people?: { students: number; hands: number; onOpen(): void };
 };
@@ -31,7 +36,10 @@ const phoneButton =
 const phoneSheetButton =
   "h-12 w-full rounded-xl border text-base font-semibold transition focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50";
 
-/** Copies the /join/CODE link, so the class can open it instead of typing the code. */
+/**
+ * Copies the /join/CODE link. Opening it joins directly, and pasting it into a join code field
+ * also works: the field keeps only the code (see joinCodeFrom).
+ */
 function CopyJoinLink({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -93,7 +101,7 @@ function CopyJoinLink({ code }: { code: string }) {
  * Session navbar: logo, the join code, raise hand or switch lesson, code size, and end/leave session.
  * On phones (under md) the logo goes, and the controls become big icon buttons plus an Options sheet.
  */
-export function TopBar({ code, isTeacher, raisedHand, onToggleHand, onExit, onSwitchLesson, people }: TopBarProps) {
+export function TopBar({ code, isTeacher, raisedHand, onToggleHand, onExit, onSwitchLesson, kidCopy = false, helpity, people }: TopBarProps) {
   const [confirming, setConfirming] = useState(false);
   const [options, setOptions] = useState(false);
 
@@ -135,7 +143,7 @@ export function TopBar({ code, isTeacher, raisedHand, onToggleHand, onExit, onSw
             Switch lesson
           </button>
         )}
-        <CodeSizeSelect />
+        <CodeSizeSelect helpity={helpity} kid={kidCopy} />
         <button
           type="button"
           onClick={() => setConfirming(true)}
@@ -191,8 +199,13 @@ export function TopBar({ code, isTeacher, raisedHand, onToggleHand, onExit, onSw
         </button>
       </div>
       <Sheet open={options} onClose={() => setOptions(false)} title="Options">
-        <div className="flex flex-col gap-3 px-5 pb-4">
-          <CodeSizeSegments />
+        <div className="flex flex-col gap-3 px-5 pb-4 whitespace-normal">
+          <CodeSizeSegments kid={kidCopy} />
+          {helpity && (
+            <div className="border-t border-border pt-4 pb-1">
+              <HelpityLevelPicker value={helpity.level} disabled={helpity.disabled} onChange={helpity.onChange} preview={false} />
+            </div>
+          )}
           {isTeacher && (
             <button
               type="button"

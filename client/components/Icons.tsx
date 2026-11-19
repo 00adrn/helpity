@@ -70,3 +70,21 @@ export function PencilIcon() {
     </svg>
   );
 }
+
+/** Settings as sliders (Lucide "sliders-horizontal"). Block-level and not nudged, so it centers. */
+export function SettingsIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.25}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={`block ${className}`}
+    >
+      <path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" />
+    </svg>
+  );
+}

@@ -1,3 +1,4 @@
+import type { HelpityLevel } from "@/lib/ai/levels";
 import { presets, type PresetId } from "@/lib/problems/presets";
 import type { StudentProgress } from "@/lib/sockets/progress";
 import type { OnMount } from "@monaco-editor/react";
@@ -145,6 +146,12 @@ export function connectToSession(
         throw new Error("Only the teacher can choose a shared editor writer");
       }
       meta.set("writerId", writerId);
+    },
+    /** Change who Helpity talks to, for every student in the session (see lib/ai/levels.ts). */
+    setHelpityLevel(level: HelpityLevel) {
+      if (closed) throw new Error("The session connection is closed");
+      if (participant.role !== "teacher") throw new Error("Only the teacher can change Helpity's level");
+      meta.set("helpityLevel", level);
     },
     /**
      * Start a new lesson for everyone: the class code becomes the new example, and the old run

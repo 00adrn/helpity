@@ -3,12 +3,22 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { CODE_SIZES, setCodeSize, useCodeSize } from "@/lib/editor/codeSize";
+import { HelpityLevelPicker } from "@/components/HelpityLevelPicker";
+import { SettingsIcon } from "@/components/Icons";
+import type { HelpityLevel } from "@/lib/ai/levels";
+import { CODE_SIZES, codeSizeCopy, setCodeSize, useCodeSize } from "@/lib/editor/codeSize";
 import { pop } from "@/lib/motion";
 
-/** The Figma navbar "Select": a small square button with a menu for the code text size. */
-export function CodeSizeSelect() {
+/** Teacher only: how Helpity talks to students, shown in the same menu as the code size. */
+export type HelpitySetting = { level: HelpityLevel; onChange(level: HelpityLevel): void; disabled?: boolean };
+
+/**
+ * The Figma navbar "Select": a small square button with a menu for the code text size. Teachers
+ * pass `helpity` and the same menu also sets how Helpity talks to students.
+ */
+export function CodeSizeSelect({ helpity, kid = false }: { helpity?: HelpitySetting; kid?: boolean }) {
   const size = useCodeSize();
+  const copy = codeSizeCopy(kid);
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -34,27 +44,57 @@ export function CodeSizeSelect() {
     <div ref={root} className="relative z-30">
       <button
         type="button"
-        aria-label="Code size"
-        title="Make the code bigger or smaller"
-        aria-haspopup="listbox"
+        aria-label={helpity ? "Settings" : "Code size"}
+        title={helpity ? "Settings: code size and how Helpity talks" : "Make the code bigger or smaller"}
+        aria-haspopup={helpity ? "dialog" : "listbox"}
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => setOpen((o) => !o)}
         // Same border, padding and line height as the other navbar buttons, so it's the same height.
-        className="min-w-[34px] rounded-lg border border-border bg-surface px-2 py-1.5 text-sm leading-5 font-bold text-muted transition hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="inline-flex min-w-[34px] items-center justify-center rounded-lg border border-border bg-surface px-2 py-1.5 text-sm leading-5 font-bold text-muted transition hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
-        Aa
+        {helpity ? (
+          // Same 20px line box as "Aa", so the button keeps the navbar's height.
+          <span className="flex size-5 items-center justify-center">
+            <SettingsIcon className="size-[18px]" />
+          </span>
+        ) : (
+          "Aa"
+        )}
       </button>
 
       <AnimatePresence>
-        {open && (
+        {open && helpity && (
+          <motion.div
+            {...pop}
+            id={listId}
+            role="dialog"
+            aria-label="Settings"
+            style={{ transformOrigin: "top right" }}
+            className="absolute top-full right-0 mt-2 flex w-[340px] flex-col whitespace-normal rounded-xl border border-border bg-surface shadow-sm"
+          >
+            <div className="p-4">
+              <CodeSizeSegments compact kid={kid} />
+            </div>
+            <div className="border-t border-border p-4">
+              <HelpityLevelPicker
+                size="small"
+                value={helpity.level}
+                disabled={helpity.disabled}
+                onChange={helpity.onChange}
+                preview={false}
+              />
+            </div>
+          </motion.div>
+        )}
+        {open && !helpity && (
           <motion.div
             {...pop}
             style={{ transformOrigin: "top right" }}
             className="absolute top-full right-0 mt-2 flex w-[184px] flex-col gap-1 rounded-lg border border-border bg-surface px-3 py-2 shadow-sm"
           >
-            <p className="text-xs leading-4 font-semibold text-muted">How big is the code?</p>
-            <ul id={listId} role="listbox" aria-label="Code size" className="flex flex-col gap-1">
+            <p className="text-xs leading-4 font-semibold text-muted">{copy.heading}</p>
+            <ul id={listId} role="listbox" aria-label={copy.heading} className="flex flex-col gap-1">
               {CODE_SIZES.map((option) => {
                 const selected = option.value === size;
                 return (
@@ -69,7 +109,7 @@ export function CodeSizeSelect() {
                         selected ? "bg-accent text-on-accent" : "text-fg hover:bg-surface-sunken"
                       }`}
                     >
-                      {option.label}
+                      {copy.label(option.value, option.label)}
                     </button>
                   </li>
                 );
@@ -82,19 +122,24 @@ export function CodeSizeSelect() {
   );
 }
 
-/** The same choice as a segmented control, for the phone's Options sheet. */
-export function CodeSizeSegments() {
+/**
+ * The same choice as a segmented control: in the phone's Options sheet, and (`compact`) in the
+ * teacher's settings menu. Same bordered look as Helpity's level picker.
+ */
+export function CodeSizeSegments({ compact = false, kid = false }: { compact?: boolean; kid?: boolean }) {
   const size = useCodeSize();
+  const copy = codeSizeCopy(kid);
+  const labelId = useId();
 
   return (
-    <div>
-      <p id="code-size-label" className="mb-2 text-sm font-semibold text-muted">
-        How big is the code?
+    <div className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
+      <p id={labelId} className={`font-semibold text-fg ${compact ? "text-xs" : "text-sm"}`}>
+        {copy.heading}
       </p>
       <div
         role="radiogroup"
-        aria-labelledby="code-size-label"
-        className="grid grid-cols-3 gap-1 rounded-xl bg-surface-sunken p-1"
+        aria-labelledby={labelId}
+        className="grid grid-cols-3 overflow-hidden rounded-lg border border-border bg-surface"
       >
         {CODE_SIZES.map((option) => {
           const selected = option.value === size;
@@ -105,11 +150,11 @@ export function CodeSizeSegments() {
               role="radio"
               aria-checked={selected}
               onClick={() => setCodeSize(option.value)}
-              className={`h-11 rounded-lg text-base font-semibold transition focus-visible:outline-2 focus-visible:outline-accent ${
-                selected ? "bg-accent text-on-accent shadow-sm" : "text-fg"
-              }`}
+              className={`font-semibold transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${
+                compact ? "h-8 text-sm" : "h-11 text-base"
+              } ${selected ? "bg-accent text-on-accent" : "text-fg hover:bg-surface-sunken"}`}
             >
-              {option.label}
+              {copy.label(option.value, option.label)}
             </button>
           );
         })}

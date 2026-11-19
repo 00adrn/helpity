@@ -5,12 +5,17 @@ import { useState, type FormEvent } from "react";
 import { randomAvatar } from "@/components/Avatar";
 import { button } from "@/components/button";
 import { FreshOnNavigate, useResetBusyOnReturn } from "@/components/FreshOnNavigate";
+import { HelpityLevelPicker } from "@/components/HelpityLevelPicker";
 import { HelpityLogo } from "@/components/HelpityLogo";
 import { ProblemPicker } from "@/components/ProblemPicker";
-import type { PresetId } from "@/lib/problems/presets";
+import { DEFAULT_HELPITY_LEVEL, helpityLevelFor, type HelpityLevel } from "@/lib/ai/levels";
+import { presets, type PresetId } from "@/lib/problems/presets";
 import { saveParticipant } from "@/lib/sockets/participant_storage";
 
-/** Teacher setup: choose a problem, then enter a name, then create the session and enter it. */
+/**
+ * Teacher setup: choose a problem, then enter a name and how Helpity should talk, then create
+ * the session and enter it.
+ */
 export default function TeachPage() {
   return (
     <FreshOnNavigate>
@@ -23,6 +28,9 @@ function TeachSetup() {
   // Set once a problem is chosen; the name step shows while it is.
   const [presetId, setPresetId] = useState<PresetId>();
   const [name, setName] = useState("");
+  // Until the teacher picks one, Helpity's level follows the chosen problem's education level.
+  const [levelChoice, setLevelChoice] = useState<HelpityLevel>();
+  const helpityLevel = levelChoice ?? (presetId ? helpityLevelFor(presets[presetId].level) : DEFAULT_HELPITY_LEVEL);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   // Browser back from the session restores this page; don't come back stuck on "Starting…".
@@ -39,7 +47,7 @@ function TeachSetup() {
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ presetId }),
+        body: JSON.stringify({ presetId, helpityLevel }),
       });
       if (!response.ok) {
         setError("Could not start a session");
@@ -93,6 +101,10 @@ function TeachSetup() {
               />
             </label>
 
+            <div className="my-3">
+              <HelpityLevelPicker value={helpityLevel} onChange={setLevelChoice} />
+            </div>
+
             <button
               type="submit"
               disabled={busy || !name.trim()}
@@ -105,6 +117,8 @@ function TeachSetup() {
               onClick={() => {
                 setError(undefined);
                 setPresetId(undefined);
+                // A different problem may suggest a different level again.
+                setLevelChoice(undefined);
               }}
               className="text-sm font-semibold text-muted hover:underline"
             >

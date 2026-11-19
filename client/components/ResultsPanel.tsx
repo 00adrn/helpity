@@ -72,6 +72,7 @@ export function ResultsPanel({
   participants: ParticipantPresence[];
   code: string;
   me: SessionParticipant;
+  /** Who Helpity talks to; the teacher can change it here for every student. */
 }) {
   const progress = useMapEntries<StudentProgress>(session?.progress);
   const [watching, setWatching] = useState<string>();
